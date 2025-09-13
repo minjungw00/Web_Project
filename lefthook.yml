@@ -9,18 +9,21 @@ pre-commit:
     eslint:
       # 변경된 스테이지 파일만 검사
       files: git diff --name-only --cached
-      glob: "*.{js,jsx,ts,tsx}"
-      run: pnpm --filter ./frontend exec eslint --cache --max-warnings=0 {staged_files}
+      glob: "**/*.{js,jsx,ts,tsx}"
+      root: "frontend/"
+      run: pnpm exec eslint --cache --max-warnings=0 {files}
 
     prettier:
       files: git diff --name-only --cached
-      glob: "*.{js,jsx,ts,tsx,css,scss,md,json,yml,yaml}"
-      run: pnpm --filter ./frontend exec prettier --cache --write {staged_files}
+      glob: "**/*.{js,jsx,ts,tsx,css,scss,md,json,yml,yaml}"
+      root: "frontend/"
+      run: pnpm exec prettier --cache --write {files}
       stage_fixed: true # 포맷 후 자동 re-stage
 
     typecheck:
       # 타입스크립트가 있으면 실행, 없으면 스킵
-      run: pnpm --filter ./frontend run typecheck || echo "[skip] no typecheck"
+      root: "frontend/"
+      run: pnpm run typecheck || echo "[skip] no typecheck"
 
 pre-push:
   parallel: true
