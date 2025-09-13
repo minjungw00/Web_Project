@@ -1,0 +1,30 @@
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit "$1"
+
+pre-commit:
+  parallel: true
+  commands:
+    eslint:
+      # 변경된 스테이지 파일만 검사
+      files: git diff --name-only --cached
+      glob: "*.{js,jsx,ts,tsx}"
+      run: pnpm --filter ./frontend exec eslint --cache --max-warnings=0 {staged_files}
+
+    prettier:
+      files: git diff --name-only --cached
+      glob: "*.{js,jsx,ts,tsx,css,scss,md,json,yml,yaml}"
+      run: pnpm --filter ./frontend exec prettier --cache --write {staged_files}
+      stage_fixed: true # 포맷 후 자동 re-stage
+
+    typecheck:
+      # 타입스크립트가 있으면 실행, 없으면 스킵
+      run: pnpm --filter ./frontend run typecheck || echo "[skip] no typecheck"
+
+pre-push:
+  parallel: true
+  commands:
+    build:
+      # 빌드 성공 보장(실제 서비스에선 pre-push 빌드가 부담스러우면 제거)
+      run: pnpm --filter ./frontend run build

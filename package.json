@@ -1,0 +1,29 @@
+{
+  "name": "web_project",
+  "private": true,
+  "version": "0.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "pnpm --filter ./frontend dev",
+    "build": "pnpm --filter ./frontend build",
+    "lint": "pnpm --filter ./frontend lint",
+    "lint:fix": "pnpm --filter ./frontend lint:fix",
+    "preview": "pnpm --filter ./frontend preview",
+    "format": "pnpm --filter ./frontend format",
+    "typecheck": "pnpm --filter ./frontend typecheck",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "lefthook": "^1.13.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "lefthook"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
