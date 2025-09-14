@@ -1,0 +1,83 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.5'
+	id 'io.spring.dependency-management' version '1.1.7'
+
+	id 'com.diffplug.spotless' version '7.2.1'
+	id 'checkstyle'
+	id 'com.github.spotbugs' version '6.3.0'
+}
+
+group = 'com.minjungw00'
+version = '0.0.1-SNAPSHOT'
+description = 'Demo project for Spring Boot'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+spotless {
+	java {
+		googleJavaFormat()
+		// import 정리, 공백, 개행 등 편의 옵션
+		// Checkstyle의 CustomImportOrder와 일치시키기 위해 비정적 임포트를 단일 그룹으로 처리
+		importOrder("\\#", "") // static import 그룹 + 나머지 모두 한 그룹
+		removeUnusedImports() // 사용하지 않는 import 제거
+		trimTrailingWhitespace() // 각 라인 끝에 있는 공백 제거
+		endWithNewline() // 파일 끝에 새로운 라인 추가
+		target("src/**/*.java")
+		// 생성코드 제외
+		targetExclude("build/**", "**/generated/**")
+	}
+}
+
+// CI에서 강제
+tasks.named("build") { dependsOn("spotlessCheck") }
+
+checkstyle {
+	toolVersion = "11.0.1"
+	config = resources.text.fromFile("config/checkstyle/google_checks.xml")
+	// 실패 시 빌드 실패
+	ignoreFailures = false
+	// 인코딩 지정(한글 주석 등)
+	configProperties["charset"] = "UTF-8"
+}
+
+tasks.named("check") {
+	dependsOn("checkstyleMain", "checkstyleTest")
+}
+
+spotbugs {
+    toolVersion = '4.9.4' // Specify the SpotBugs tool version
+    ignoreFailures = true // Continue build even if SpotBugs finds issues
+    effort = 'max' // Set analysis effort level
+    showProgress = true // Display progress during analysis
+}
+
+tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
+    reports {
+        xml.required = true
+        html.required = false // Example: Disable HTML reports
+    }
+}
+
+tasks.named("check") {
+  dependsOn("spotbugsMain", "spotbugsTest")
+}

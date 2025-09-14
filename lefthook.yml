@@ -6,28 +6,49 @@ commit-msg:
 pre-commit:
   parallel: true
   commands:
-    eslint:
+    fe-eslint:
       # 변경된 스테이지 파일만 검사
       files: git diff --name-only --cached
       glob: "**/*.{js,jsx,ts,tsx}"
       root: "frontend/"
       run: pnpm exec eslint --cache --max-warnings=0 {files}
 
-    prettier:
+    fe-prettier:
       files: git diff --name-only --cached
       glob: "**/*.{js,jsx,ts,tsx,css,scss,md,json,yml,yaml}"
       root: "frontend/"
       run: pnpm exec prettier --cache --write {files}
       stage_fixed: true # 포맷 후 자동 re-stage
 
-    typecheck:
+    fe-typecheck:
       # 타입스크립트가 있으면 실행, 없으면 스킵
       root: "frontend/"
       run: pnpm run typecheck || echo "[skip] no typecheck"
 
+    be-spotless:
+      root: "backend"
+      run: ./gradlew -q spotlessApply
+
+    be-checkstyle:
+      root: "backend"
+      run: ./gradlew -q checkstyleMain
+
 pre-push:
   parallel: true
   commands:
-    build:
+    fe-build:
       # 빌드 성공 보장(실제 서비스에선 pre-push 빌드가 부담스러우면 제거)
-      run: pnpm --filter ./frontend run build
+      root: "frontend/"
+      run: pnpm run build
+
+    be-spotbugs:
+      root: "backend"
+      run: ./gradlew -q spotbugsMain spotbugsTest
+
+    be-test:
+      root: "backend"
+      run: ./gradlew -q clean test
+
+    be-build:
+      root: "backend"
+      run: ./gradlew -q build
