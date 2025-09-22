@@ -26,10 +26,11 @@ replay_pid*
 # node
 node_modules
 dist
+.pnpm-store
 
 # vscode
 .vscode
 
 # env files (do not commit secrets)
-frontend/.env*
-backend/.env*
+.env*
+**/.env*

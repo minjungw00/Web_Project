@@ -1,6 +1,6 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.5.5'
+	id 'org.springframework.boot' version '3.5.6'
 	id 'io.spring.dependency-management' version '1.1.7'
 
 	id 'com.diffplug.spotless' version '7.2.1'
@@ -24,8 +24,15 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+	// SpotBugs annotations for suppressing specific findings in code (compile-time only)
+	compileOnly 'com.github.spotbugs:spotbugs-annotations:4.9.4'
+	testCompileOnly 'com.github.spotbugs:spotbugs-annotations:4.9.4'
+	runtimeOnly 'com.mysql:mysql-connector-j'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	// Use in-memory DB for tests so that DataSource auto-config succeeds
+	testImplementation 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

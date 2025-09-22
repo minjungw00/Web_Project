@@ -13,6 +13,9 @@ const App = (): React.ReactElement => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<HealthResponse | null>(null);
+  const [dbLoading, setDbLoading] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [dbData, setDbData] = useState<HealthResponse | null>(null);
 
   const checkServerHealth = async (): Promise<void> => {
     setLoading(true);
@@ -30,6 +33,25 @@ const App = (): React.ReactElement => {
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkDbHealth = async (): Promise<void> => {
+    setDbLoading(true);
+    setDbError(null);
+    setDbData(null);
+    try {
+      const resp = await fetch('/api/db/health');
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status}`);
+      }
+      const json = (await resp.json()) as HealthResponse;
+      setDbData(json);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      setDbError(msg);
+    } finally {
+      setDbLoading(false);
     }
   };
 
@@ -71,6 +93,28 @@ const App = (): React.ReactElement => {
             }}
           >
             {JSON.stringify(data, null, 2)}
+          </pre>
+        ) : null}
+        <hr />
+        <button onClick={checkDbHealth} type="button">
+          {dbLoading ? 'DB 상태 확인 중…' : 'DB 상태 확인 (/api/db/health)'}
+        </button>
+        {Boolean(dbError) && (
+          <p style={{ color: 'crimson' }}>요청 실패: {dbError}</p>
+        )}
+        {dbData ? (
+          <pre
+            style={{
+              textAlign: 'left',
+              background: '#111827',
+              color: '#e5e7eb',
+              padding: '12px',
+              borderRadius: 8,
+              overflowX: 'auto',
+              marginTop: 8,
+            }}
+          >
+            {JSON.stringify(dbData, null, 2)}
           </pre>
         ) : null}
       </div>
