@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "description": "",
   "scripts": {
+    "setup:dev-env": "node ./scripts/sync-local-ids.mjs",
+    "docker:dev:up": "pnpm run setup:dev-env && docker compose --env-file infra/docker/.env.local -f infra/docker/docker-compose.dev.yml up -d",
+    "docker:dev:down": "pnpm run setup:dev-env && docker compose --env-file infra/docker/.env.local -f infra/docker/docker-compose.dev.yml down",
     "dev:frontend": "pnpm --filter ./frontend dev",
     "build:frontend": "pnpm --filter ./frontend build",
     "lint:frontend": "pnpm --filter ./frontend lint:fix",

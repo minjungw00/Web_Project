@@ -32,6 +32,19 @@
 - Nginx
 - Docker
 
+## Local development helpers
+
+Docker 개발 스택을 사용할 때는 로컬 계정의 UID/GID를 컨테이너에 전달해야 권한 문제가 발생하지 않습니다. 아래 스크립트로 환경 파일을 생성한 뒤 Compose 명령을 실행하세요.
+
+```bash
+pnpm run setup:dev-env
+pnpm run docker:dev:up
+# 작업 종료 시
+pnpm run docker:dev:down
+```
+
+`setup:dev-env` 스크립트는 `infra/docker/.env.local` 파일에 `LOCAL_UID`와 `LOCAL_GID` 값을 기록하며, `docker:dev:up`/`docker:dev:down`은 해당 값을 자동으로 Compose에 넘깁니다.
+
 ## Server Spec
 
 - CPU : Intel N100 (4C 4T, 6M cache, 1.0/3.4 GHz)
