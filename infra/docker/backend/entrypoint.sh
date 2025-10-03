@@ -1,5 +1,5 @@
 #!/bin/sh
-set -euo pipefail
+set -eu
 
 JAVA_OPTS="${JAVA_OPTS:-}"
 
