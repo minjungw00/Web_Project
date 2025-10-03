@@ -271,7 +271,7 @@ ${HOME}/srv/web_project
   - SSH로 서버 접속, `${HOME}/srv/web_project/.env`, `backend/.env.production`, `nginx/.env.production`를 갱신
   - Secrets에 base64로 저장 → 워크플로우에서 디코드 → 파일 권한 600으로 기록
   - 요구 Secrets(고정 키 이름)
-    - `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
+    - `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_PORT`
     - `ROOT_ENV_BASE64`, `BACKEND_ENV_PRODUCTION_BASE64`, `NGINX_ENV_PRODUCTION_BASE64`
   - 사용 순서: ① sync-env 최신화 → ② 배포(pull → frontend(추출) → up -d) → ③ compose config/헬스체크 확인
 

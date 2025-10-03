@@ -45,6 +45,7 @@ jobs:
           port: ${{ env.DEPLOY_PORT }}
           source: infra/docker/docker-compose.prod.yml
           target: ~/srv/web_project/
+          strip_components: 2
 
       - name: Execute deployment on server
         uses: appleboy/ssh-action@v1
