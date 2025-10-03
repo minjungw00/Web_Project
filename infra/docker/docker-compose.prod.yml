@@ -103,7 +103,7 @@ services:
       [
         "sh",
         "-c",
-        'set -euo pipefail; src=${FE_DIST_PATH:-/opt/dist}; dest=/dist; mkdir -p "$dest"; if [ -d "$src" ]; then rsync -a --delete "$src"/ "$dest"/; else echo "FE dist not found at $src"; exit 1; fi',
+        'set -euo pipefail; src=${FE_DIST_PATH:-/opt/dist}; dest=/dist; mkdir -p "$$dest"; if [ -d "$$src" ]; then rsync -a --delete "$$src"/ "$$dest"/; else echo "FE dist not found at $$src"; exit 1; fi',
       ]
     volumes:
       - ${FE_DIST_MOUNT:-frontend-dist}:/dist
