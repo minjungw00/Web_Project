@@ -59,6 +59,10 @@ services:
         GROUP_ID: ${LOCAL_GID:-1000}
     ports:
       - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/appdb?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: app
+      SPRING_DATASOURCE_PASSWORD: app_pw
     volumes:
       - ../../backend:/workspace
       - gradle-cache:/workspace/.gradle

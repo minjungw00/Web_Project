@@ -1,11 +1,22 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family:
+    'Pretendard Variable',
+    Pretendard,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Apple SD Gothic Neo',
+    'Noto Sans KR',
+    'Noto Sans',
+    'Segoe UI',
+    sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: #15161b;
+  background-color: #f3f4fc;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -15,11 +26,11 @@
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: #a9eaff;
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
+  color: #a9eaff;
 }
 
 body {
@@ -28,10 +39,11 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  font-family: inherit;
 }
 
 h1 {
-  font-size: 3.2em;
+  font-size: 2em;
   line-height: 1.1;
 }
 
@@ -42,12 +54,13 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #15161b;
   cursor: pointer;
   transition: border-color 0.25s;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: #73dfff;
+  filter: drop-shadow(0 0 0.5em #73dfffaa);
 }
 button:focus,
 button:focus-visible {
@@ -56,13 +69,26 @@ button:focus-visible {
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    color: #15161b;
+    background-color: #f3f4fc;
   }
   a:hover {
-    color: #747bff;
+    color: #a9eaff;
   }
   button {
-    background-color: #f9f9f9;
+    background-color: #d6f5ff;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #f3f4fc;
+    background-color: #15161b;
+  }
+  a:hover {
+    color: #005063;
+  }
+  button {
+    background-color: #005063;
   }
 }

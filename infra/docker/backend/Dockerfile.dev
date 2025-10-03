@@ -4,8 +4,27 @@ FROM eclipse-temurin:21-jdk
 ARG USER_ID=1000
 ARG GROUP_ID=1000
 
-RUN groupadd -g ${GROUP_ID} app \
-  && useradd -m -u ${USER_ID} -g app app
+RUN set -eux; \
+    if getent group "${GROUP_ID}" >/dev/null; then \
+      existing_group=$(getent group "${GROUP_ID}" | cut -d: -f1); \
+      if [ "${existing_group}" != "app" ]; then \
+        groupmod -n app "${existing_group}"; \
+      fi; \
+    else \
+      groupadd -g "${GROUP_ID}" app; \
+    fi; \
+    if getent passwd "${USER_ID}" >/dev/null; then \
+      existing_user=$(getent passwd "${USER_ID}" | cut -d: -f1); \
+      if [ "${existing_user}" != "app" ]; then \
+        usermod -l app "${existing_user}"; \
+        usermod -d /home/app -m app; \
+      fi; \
+      usermod -g app app; \
+    elif id -u app >/dev/null 2>&1; then \
+      usermod -u "${USER_ID}" -g app app; \
+    else \
+      useradd -m -u "${USER_ID}" -g app app; \
+    fi
 
 WORKDIR /workspace
 
@@ -18,8 +37,12 @@ RUN chmod +x gradlew \
   && mkdir -p /workspace/.gradle \
   && chown -R app:app /workspace
 
-USER app
+COPY infra/docker/backend/dev-entrypoint.sh /usr/local/bin/dev-entrypoint.sh
+RUN chmod +x /usr/local/bin/dev-entrypoint.sh
+
+USER root
 
 EXPOSE 8080
 
+ENTRYPOINT ["/usr/local/bin/dev-entrypoint.sh"]
 CMD ["./gradlew", "bootRun"]

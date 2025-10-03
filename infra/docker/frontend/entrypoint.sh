@@ -19,6 +19,7 @@ ensure_path() {
 
 ensure_path "$PNPM_STORE"
 ensure_path "$WORKDIR/node_modules"
+ensure_path "$WORKDIR/dist"
 
 if [ -d "$WORKDIR/.pnpm-store" ]; then
   ensure_path "$WORKDIR/.pnpm-store"
