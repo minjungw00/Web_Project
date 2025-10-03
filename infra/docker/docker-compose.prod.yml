@@ -47,7 +47,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER:-root} -p$${MYSQL_PASSWORD:-$${MYSQL_ROOT_PASSWORD}} || exit 1",
+          'mysqladmin ping --silent -uroot -p"$${MYSQL_ROOT_PASSWORD:-}" || exit 1',
         ]
       interval: 10s
       timeout: 5s
