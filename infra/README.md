@@ -51,17 +51,23 @@
     - FE dist(이미지 내부): `/opt/dist`(서버 변수 `FE_DIST_PATH`로 오버라이드 가능, 기본값 `/opt/dist`)
     - Nginx 정적 루트: `/usr/share/nginx/html`
     - Certbot 웹루트: `/var/www/certbot`
+    - Let's Encrypt 인증서/키: `/etc/letsencrypt`
   - 운영 마운트 원칙
     - Certbot, MySQL 데이터는 호스트 바인드 마운트 필수(백업/마이그레이션/감사 용이)
     - FE dist는 기본적으로 named volume 사용, `FE_DIST_MOUNT`에 절대 경로를 지정하면 호스트 바인드로 전환된다.
   - 권장 호스트 경로(운영)
     - MySQL 데이터: `${HOME}/srv/web_project/mysql`
-    - Certbot: `${HOME}/srv/web_project/certbot`
+    - Certbot 챌린지 웹루트: `${HOME}/srv/web_project/certbot`
+    - Let's Encrypt 인증서/키: `${HOME}/srv/web_project/letsencrypt/etc`
+    - Let's Encrypt state: `${HOME}/srv/web_project/letsencrypt/lib`
+    - Let's Encrypt 로그: `${HOME}/srv/web_project/letsencrypt/log`
     - FE dist(옵션): `${HOME}/srv/web_project/frontend/dist`(호스트 바인드 활성화 시)
     - Nginx/Backend .env 파일은 항상 호스트에 존재(Section 7 참조)
   - 호스트 바인드 제어 변수(운영)
     - `MYSQL_DATA_MOUNT`: 기본값은 `mysql-data`(named volume). 절대 경로로 설정하면 호스트 바인드.
     - `CERTBOT_MOUNT`: 기본값은 `certbot`(named volume). 절대 경로로 설정하면 호스트 바인드.
+    - `LETSENCRYPT_MOUNT`: 기본값은 `letsencrypt`(named volume). 절대 경로로 설정하면 호스트 바인드.
+    - `LETSENCRYPT_LOG_MOUNT`: 기본값은 `letsencrypt-log`(named volume). 절대 경로로 설정하면 호스트 바인드.
     - `FE_DIST_MOUNT`: 기본값은 `frontend-dist`(named volume). 절대 경로로 설정하면 호스트 바인드.
 
 ---
@@ -183,7 +189,11 @@ ${HOME}/srv/web_project
   /nginx
     .env.production   # 운영 환경변수 (비밀 금지)
   /mysql              # DB 데이터 볼륨
-  /certbot            # 인증서 볼륨
+  /certbot            # ACME 웹루트(인증서 발급용)
+  /letsencrypt
+    /etc              # 발급된 인증서/체인
+    /lib              # certbot state
+    /log              # certbot 로그
   .env                # compose용(예: FE_TAG, BE_TAG 등 이미지 태그 고정)
   # (옵션) FE dist를 호스트 바인드로 운영하려면 다음 경로를 사용
   # /frontend/dist     # FE 정적 산출물(바인드 마운트 선택 시)
@@ -237,6 +247,9 @@ ${HOME}/srv/web_project
     - `NGINX_STATIC_ROOT=/usr/share/nginx/html`
     - `NGINX_BACKEND_HOST=backend`
     - `NGINX_BACKEND_PORT=8080`
+  - `NGINX_SSL_CERT=/etc/letsencrypt/live/<domain>/fullchain.pem`
+  - `NGINX_SSL_CERT_KEY=/etc/letsencrypt/live/<domain>/privkey.pem`
+  - `NGINX_SSL_TRUSTED_CERT=/etc/letsencrypt/live/<domain>/chain.pem`
     - 선택 캐시: `NGINX_STATIC_CACHE_EXPIRES=1h`, `NGINX_STATIC_CACHE_CONTROL=max-age=3600, public`
 
 - `frontend/.env.production`(빌드 전용, 공개값만, 필수)
@@ -317,6 +330,29 @@ Compose에서는 `depends_on: condition: service_healthy`로 기동 순서/교�
 
 - 로그 로테이션: `json-file` 드라이버에 `max-size`, `max-file` 적용(예: `max-size: "10m"`, `max-file: "3"`)
 - 필요 시 Loki/ELK, Prometheus/Grafana, Sentry 등을 연계
+
+### 9.5 Certbot 인증서 발급/갱신
+
+1. DNS가 운영 도메인을 가리키는지 확인한다(A/AAAA 레코드).
+2. 서버에 `infra/nginx/certbot-issue.sh`를 업로드하고 실행 권한을 부여한다(`chmod +x certbot-issue.sh`). 스크립트는 전달된 `--base-dir` 또는 자신의 디렉터리를 기준으로 동작한다.
+3. 최초 발급은 아래와 같이 수행한다(
+   `${HOME}/srv/web_project`를 Certbot 데이터 경로로 사용하는 경우 예시):
+
+   ```bash
+   ./certbot-issue.sh \
+     --base-dir ${HOME}/srv/web_project \
+     -d example.com -d www.example.com \
+     -e admin@example.com
+   ```
+
+   - 스크립트는 `certbot/certbot` 이미지를 사용하여 웹루트(`<base-dir>/certbot`)를 통해 챌린지를 처리하고,
+     인증서/키는 `<base-dir>/letsencrypt/etc` 이하에 저장한다.
+   - `--base-dir`을 생략하면 스크립트가 위치한 디렉터리를 자동으로 사용한다.
+   - `--staging` 또는 `--dry-run` 옵션으로 사전 검증이 가능하다.
+
+4. 발급 후 `docker compose -f docker-compose.prod.yml up -d nginx`를 재실행하거나
+   `docker compose exec nginx nginx -s reload`로 설정을 재적용한다.
+5. 정기 갱신은 동일 스크립트를 실행하거나, 크론으로 `certbot-issue.sh --base-dir ${HOME}/srv/web_project --dry-run`을 주기적으로 실행해 상태를 확인한다.
 
 ---
 

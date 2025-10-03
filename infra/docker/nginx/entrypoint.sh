@@ -14,6 +14,9 @@ if [ -f "$template" ]; then
     ${NGINX_BACKEND_HOST}\
     ${NGINX_BACKEND_PORT}\
     ${NGINX_FRONTEND_UPSTREAM}\
+    ${NGINX_SSL_CERT}\
+    ${NGINX_SSL_CERT_KEY}\
+    ${NGINX_SSL_TRUSTED_CERT}\
   ' < "$template" > "$output"
 fi
 

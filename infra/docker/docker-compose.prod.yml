@@ -72,6 +72,8 @@ services:
     volumes:
       - ${CERTBOT_MOUNT:-certbot}:/var/www/certbot
       - ${FE_DIST_MOUNT:-frontend-dist}:/usr/share/nginx/html:ro
+      - ${LETSENCRYPT_MOUNT:-letsencrypt}:/etc/letsencrypt
+      - ${LETSENCRYPT_LOG_MOUNT:-letsencrypt-log}:/var/log/letsencrypt
     healthcheck:
       test:
         [
@@ -124,3 +126,5 @@ volumes:
   frontend-dist:
   mysql-data:
   certbot:
+  letsencrypt:
+  letsencrypt-log:
