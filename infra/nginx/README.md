@@ -83,6 +83,11 @@ cp "${BASE}/fullchain.pem" "${BASE}/chain.pem"
 
 1. DNS A/AAAA 레코드가 대상 서버를 가리키는지 확인합니다.
 2. `docker-compose.prod.yml`에서 `certbot` 및 `letsencrypt*` 볼륨이 호스트 디렉터리에 정상적으로 마운트되어야 합니다.
+
+- `.env`에서 `CERTBOT_MOUNT`, `LETSENCRYPT_MOUNT`, `LETSENCRYPT_LOG_MOUNT` 값을 **절대 경로**로 지정해 bind mount를 사용하세요.
+- 예시: `${HOME}/srv/web_project/certbot`, `${HOME}/srv/web_project/letsencrypt/etc`, `${HOME}/srv/web_project/letsencrypt/log`
+- Named volume로 두면 Certbot이 만든 파일과 Nginx가 읽는 경로가 달라져 TLS 로딩에 실패합니다.
+
 3. Nginx 컨테이너가 80 포트에서 `/.well-known/acme-challenge/`를 서빙 중인지 확인합니다(임시 인증서 또는 HTTP-only 구성이 필요).
 
 ### 5.2 실행 예시

@@ -350,6 +350,8 @@ Compose에서는 `depends_on: condition: service_healthy`로 기동 순서/교�
    - `--base-dir`을 생략하면 스크립트가 위치한 디렉터리를 자동으로 사용한다.
    - `--staging` 또는 `--dry-run` 옵션으로 사전 검증이 가능하다.
 
+> **중요**: 서버 루트 `.env`에서 `CERTBOT_MOUNT`, `LETSENCRYPT_MOUNT`, `LETSENCRYPT_LOG_MOUNT` 값을 반드시 호스트 절대 경로로 설정해 bind mount 하세요. 예) `${HOME}/srv/web_project/certbot`, `${HOME}/srv/web_project/letsencrypt/etc`, `${HOME}/srv/web_project/letsencrypt/log`. Named volume를 사용할 경우 Certbot이 생성한 인증서를 Nginx가 읽지 못해 기동에 실패합니다.
+
 4. 발급 후 `docker compose -f docker-compose.prod.yml up -d nginx`를 재실행하거나
    `docker compose exec nginx nginx -s reload`로 설정을 재적용한다.
 5. 정기 갱신은 동일 스크립트를 실행하거나, 크론으로 `certbot-issue.sh --base-dir ${HOME}/srv/web_project --dry-run`을 주기적으로 실행해 상태를 확인한다.
