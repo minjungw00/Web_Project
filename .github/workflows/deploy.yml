@@ -1,0 +1,86 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "모든 서비스에 공통 적용할 태그 (미지정 시 latest)"
+        required: false
+        default: ""
+      fe_tag:
+        description: "frontend 이미지 태그 (미지정 시 image_tag 또는 latest)"
+        required: false
+        default: ""
+      be_tag:
+        description: "backend 이미지 태그 (미지정 시 image_tag 또는 latest)"
+        required: false
+        default: ""
+      nginx_tag:
+        description: "nginx 이미지 태그 (미지정 시 image_tag 또는 latest)"
+        required: false
+        default: ""
+      db_tag:
+        description: "mysql 이미지 태그 (미지정 시 image_tag 또는 latest)"
+        required: false
+        default: ""
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload compose file to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          source: infra/docker/docker-compose.prod.yml
+          target: ~/srv/web_project/
+
+      - name: Execute deployment on server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            WORKDIR="$HOME/srv/web_project"
+            mkdir -p "$WORKDIR" "$WORKDIR/backend" "$WORKDIR/nginx"
+            # set server root for compose
+            export SERVER_ROOT="$WORKDIR"
+
+            COMMON_TAG="${{ inputs.image_tag }}"
+
+            set_tag() {
+              local name="$1"
+              local value="$2"
+              if [ -n "$value" ]; then
+                export "$name"="$value"
+              elif [ -n "$COMMON_TAG" ]; then
+                export "$name"="$COMMON_TAG"
+              fi
+            }
+
+            set_tag FE_TAG "${{ inputs.fe_tag }}"
+            set_tag BE_TAG "${{ inputs.be_tag }}"
+            set_tag NGINX_TAG "${{ inputs.nginx_tag }}"
+
+            if [ -n "${{ inputs.db_tag }}" ]; then
+              export DB_TAG="${{ inputs.db_tag }}"
+            fi
+
+            cd "$WORKDIR"
+            docker compose -f docker-compose.prod.yml --env-file .env pull
+            # Always refresh FE dist from artifact image before starting services
+            docker compose -f docker-compose.prod.yml --env-file .env run --rm frontend
+            docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans
+            # FE dist 추출 job은 depends_on: service_completed_successfully로 연계되어 최초 up 시 자동 실행됨
+            docker image prune -f --filter "label=org.opencontainers.image.source=https://github.com/${{ github.repository }}"

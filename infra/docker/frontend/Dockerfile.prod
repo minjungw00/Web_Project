@@ -1,42 +1,50 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22-alpine
 
-ARG USER_ID=1000
-ARG GROUP_ID=1000
+############################################
+# Builder: create production dist
+############################################
+FROM node:22-alpine AS builder
 
-ENV CI=true
-ENV PNPM_HOME=/home/app/.local/share/pnpm
-ENV PNPM_STORE_PATH=/home/app/.pnpm-store
-ENV PATH=$PNPM_HOME:$PATH
+ENV CI=true \
+    PNPM_HOME=/home/node/.local/share/pnpm \
+    PNPM_STORE_PATH=/home/node/.pnpm-store \
+    PATH=/home/node/.local/share/pnpm:$PATH
 
-RUN apk add --no-cache bash shadow su-exec \
-  && userdel -r node || true \
-  && groupdel node || true \
-  && groupadd -g ${GROUP_ID} app \
-  && useradd -u ${USER_ID} -g app -m app \
-  && mkdir -p $PNPM_HOME $PNPM_STORE_PATH \
-  && chown -R app:app $PNPM_HOME $PNPM_STORE_PATH
+RUN apk upgrade --no-cache
 
-RUN corepack enable \
-  && corepack prepare pnpm@9 --activate
+RUN corepack enable && corepack prepare pnpm@9 --activate
 
 WORKDIR /workspace
 
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN if [ -f pnpm-lock.yaml ] && [ ! -s pnpm-lock.yaml ]; then rm pnpm-lock.yaml; fi
-RUN mkdir -p /workspace/node_modules \
-  && chown -R app:app /workspace
-
-USER app
-
 RUN pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
 
-USER root
+COPY frontend ./
+ENV NODE_ENV=production
+RUN pnpm build
 
-COPY --chown=app:app frontend ./
+############################################
+# Artifact image: contains only dist at /opt/dist
+############################################
+FROM alpine:3.20
 
-COPY infra/docker/frontend/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+ARG SOURCE_REPOSITORY="minjungw00/Web_Project"
+ENV SOURCE_REPOSITORY="${SOURCE_REPOSITORY}"
 
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["sh", "-c", "pnpm build && pnpm preview --host 0.0.0.0 --port 4173"]
+RUN apk upgrade --no-cache
+
+LABEL org.opencontainers.image.title="web-project-frontend" \
+  org.opencontainers.image.description="Frontend build artifact image containing compiled dist" \
+  org.opencontainers.image.source="https://github.com/${SOURCE_REPOSITORY}" \
+  org.opencontainers.image.licenses="MIT"
+
+RUN apk add --no-cache rsync \
+  && adduser -D -u 10001 app \
+  && mkdir -p /opt/dist
+
+COPY --from=builder /workspace/dist /opt/dist
+
+# No default command required; this image is used as a source for dist extraction
+
+ENV FE_DIST_PATH=/opt/dist

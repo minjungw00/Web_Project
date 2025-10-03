@@ -7,6 +7,7 @@ services:
       args:
         USER_ID: ${LOCAL_UID:-1000}
         GROUP_ID: ${LOCAL_GID:-1000}
+    # Keep dev server available on 5173 for direct access by developers
     ports:
       - "5173:5173"
     env_file:
@@ -24,6 +25,31 @@ services:
     networks:
       - web-net
 
+  # Optional: build frontend dist continuously and share with Nginx
+  fe-builder:
+    build:
+      context: ../..
+      dockerfile: infra/docker/frontend/Dockerfile.dev
+      args:
+        USER_ID: ${LOCAL_UID:-1000}
+        GROUP_ID: ${LOCAL_GID:-1000}
+    working_dir: /workspace
+    command: sh -c "pnpm install && pnpm build --watch"
+    env_file:
+      - ../../frontend/.env.development
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ../../frontend:/workspace
+      - frontend-node-modules:/workspace/node_modules
+      - frontend-pnpm-store:/home/app/.pnpm-store
+      - frontend-dist:/workspace/dist
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - web-net
+
   backend:
     build:
       context: ../..
@@ -33,10 +59,6 @@ services:
         GROUP_ID: ${LOCAL_GID:-1000}
     ports:
       - "8080:8080"
-    env_file:
-      - ../../backend/.env.development
-    environment:
-      SPRING_OUTPUT_ANSI_ENABLED: "ALWAYS"
     volumes:
       - ../../backend:/workspace
       - gradle-cache:/workspace/.gradle
@@ -71,18 +93,17 @@ services:
   nginx:
     build:
       context: ../..
-      dockerfile: infra/docker/nginx/Dockerfile
+      dockerfile: infra/docker/nginx/Dockerfile.dev
     ports:
       - "8081:80"
     env_file:
       - ../nginx/.env.development
     volumes:
-      - ../nginx/default.conf:/etc/nginx/templates/default.conf.template:ro
+      - ../nginx/default.dev.conf:/etc/nginx/templates/default.conf.template:ro
       - ../nginx/proxy-headers.conf:/etc/nginx/snippets/proxy-headers.conf:ro
       - certbot-dev:/var/www/certbot
+      - frontend-dist:/usr/share/nginx/html:ro
     depends_on:
-      frontend:
-        condition: service_started
       backend:
         condition: service_started
     networks:
@@ -98,3 +119,4 @@ volumes:
   gradle-cache:
   mysql-data-dev:
   certbot-dev:
+  frontend-dist:

@@ -1,0 +1,47 @@
+name: sync-env
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "배포 대상 환경 (예: production)"
+        required: false
+        default: production
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    steps:
+      - name: Sync environment files on server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            WORKDIR="$HOME/srv/web_project"
+            mkdir -p "$WORKDIR/backend" "$WORKDIR/nginx"
+
+            ROOT_ENV_B64='${{ secrets.ROOT_ENV_BASE64 }}'
+            BE_ENV_B64='${{ secrets.BACKEND_ENV_PRODUCTION_BASE64 }}'
+            NGINX_ENV_B64='${{ secrets.NGINX_ENV_PRODUCTION_BASE64 }}'
+
+            write_if_present() {
+              local b64="$1" path="$2" tmp="$2.tmp" label="$3"
+              if [ -n "$b64" ] && [ "$b64" != '***' ]; then
+                echo "[sync-env] updating: $label -> $path"
+                printf '%s' "$b64" | base64 -d > "$tmp"
+                install -m 600 "$tmp" "$path"
+                rm -f "$tmp"
+              else
+                echo "[sync-env] skip: $label (no secret provided)"
+              fi
+            }
+
+            write_if_present "$ROOT_ENV_B64"  "$WORKDIR/.env"                   ".env (root)"
+            write_if_present "$BE_ENV_B64"    "$WORKDIR/backend/.env.production" "backend/.env.production"
+            write_if_present "$NGINX_ENV_B64" "$WORKDIR/nginx/.env.production"   "nginx/.env.production"
+
+            echo "[sync-env] done"

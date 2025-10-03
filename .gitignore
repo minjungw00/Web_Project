@@ -34,3 +34,4 @@ dist
 # env files (do not commit secrets)
 .env*
 **/.env*
+!**/.env*.example

@@ -1,99 +1,126 @@
 name: web_project
 services:
-  frontend:
-    build:
-      context: ../..
-      dockerfile: infra/docker/frontend/Dockerfile.prod
-      args:
-        USER_ID: ${LOCAL_UID:-1000}
-        GROUP_ID: ${LOCAL_GID:-1000}
-    env_file:
-      - ../../frontend/.env.production
-    environment:
-      NODE_ENV: production
-    volumes:
-      - ${HOME}/srv/web_project/frontend/dist:/workspace/dist
-      - frontend-pnpm-store-prod:/home/app/.pnpm-store
-    expose:
-      - "5173"
-    depends_on:
-      backend:
-        condition: service_started
-    restart: unless-stopped
-    networks:
-      - web-net
-
   backend:
-    build:
-      context: ../..
-      dockerfile: infra/docker/backend/Dockerfile.prod
-      args:
-        USER_ID: ${LOCAL_UID:-1000}
-        GROUP_ID: ${LOCAL_GID:-1000}
+    image: ${BACKEND_IMAGE:-ghcr.io/minjungw00/web-project-backend}:${BE_TAG:-latest}
     env_file:
-      - ../../backend/.env.production
+      - ${SERVER_ROOT:-.}/backend/.env.production
     environment:
       JAVA_OPTS: -Xms512m -Xmx512m
     volumes:
-      - ${HOME}/srv/web_project/backend/logs:/app/logs
-      - ${HOME}/srv/web_project/backend/config:/app/config:ro
+      - ${SERVER_ROOT:-$HOME/srv/web_project}/backend/logs:/app/logs
+      - ${SERVER_ROOT:-$HOME/srv/web_project}/backend/config:/app/config:ro
     expose:
       - "8080"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:8080/actuator/health || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     depends_on:
       mysql:
         condition: service_healthy
     restart: unless-stopped
     networks:
-      - web-net
+      - ${COMPOSE_NETWORK:-webnet}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   mysql:
-    build:
-      context: ../..
-      dockerfile: infra/docker/mysql/Dockerfile
+    image: ${MYSQL_IMAGE:-mysql}:${DB_TAG:-8.4}
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-appdb}
       MYSQL_USER: ${MYSQL_USER:-app}
-      MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD:-change_me}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
     volumes:
-      - ${HOME}/srv/web_project/mysql/data:/var/lib/mysql
-      - ${HOME}/srv/web_project/mysql/init:/docker-entrypoint-initdb.d:ro
+      - ${MYSQL_DATA_MOUNT:-mysql-data}:/var/lib/mysql
+      - ${SERVER_ROOT:-.}/mysql/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER:-root} -p$${MYSQL_PASSWORD:-$${MYSQL_ROOT_PASSWORD}} || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 20s
     restart: unless-stopped
     networks:
-      - web-net
+      - ${COMPOSE_NETWORK:-webnet}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   nginx:
-    build:
-      context: ../..
-      dockerfile: infra/docker/nginx/Dockerfile
+    image: ${NGINX_IMAGE:-ghcr.io/minjungw00/web-project-nginx}:${NGINX_TAG:-latest}
     ports:
       - "80:80"
       - "443:443"
     env_file:
-      - ../nginx/.env.production
+      - ${SERVER_ROOT:-.}/nginx/.env.production
     volumes:
-      - ../nginx/default.conf:/etc/nginx/templates/default.conf.template:ro
-      - ../nginx/proxy-headers.conf:/etc/nginx/snippets/proxy-headers.conf:ro
-      - ${HOME}/srv/web_project/frontend/dist:/usr/share/nginx/html:ro
-      - ${HOME}/srv/web_project/certbot:/var/www/certbot
+      - ${CERTBOT_MOUNT:-certbot}:/var/www/certbot
+      - ${FE_DIST_MOUNT:-frontend-dist}:/usr/share/nginx/html:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost/healthz >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     depends_on:
-      frontend:
-        condition: service_started
       backend:
-        condition: service_started
+        condition: service_healthy
+      frontend:
+        condition: service_completed_successfully
     restart: unless-stopped
     networks:
-      - web-net
+      - ${COMPOSE_NETWORK:-webnet}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # One-shot job to sync FE dist from artifact image to shared volume
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/minjungw00/web-project-frontend}:${FE_TAG:-latest}
+    command:
+      [
+        "sh",
+        "-c",
+        'set -euo pipefail; src=${FE_DIST_PATH:-/opt/dist}; dest=/dist; mkdir -p "$dest"; if [ -d "$src" ]; then rsync -a --delete "$src"/ "$dest"/; else echo "FE dist not found at $src"; exit 1; fi',
+      ]
+    volumes:
+      - ${FE_DIST_MOUNT:-frontend-dist}:/dist
+    restart: "no"
+    networks:
+      - ${COMPOSE_NETWORK:-webnet}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
-  web-net:
+  webnet:
     driver: bridge
 
 volumes:
-  frontend-pnpm-store-prod:
+  frontend-dist:
+  mysql-data:
+  certbot:
