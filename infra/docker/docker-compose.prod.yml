@@ -1,6 +1,13 @@
 name: web_project
+
+x-default-dns: &default-dns
+  dns:
+    - ${COMPOSE_DNS1:-1.1.1.1}
+    - ${COMPOSE_DNS2:-8.8.8.8}
+
 services:
   backend:
+    <<: *default-dns
     image: ${BACKEND_IMAGE:-ghcr.io/minjungw00/web-project-backend}:${BE_TAG:-latest}
     env_file:
       - ${SERVER_ROOT:-.}/backend/.env.production
@@ -34,6 +41,7 @@ services:
         max-file: "3"
 
   mysql:
+    <<: *default-dns
     image: ${MYSQL_IMAGE:-mysql}:${DB_TAG:-8.4}
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me}
@@ -63,6 +71,7 @@ services:
         max-file: "3"
 
   nginx:
+    <<: *default-dns
     image: ${NGINX_IMAGE:-ghcr.io/minjungw00/web-project-nginx}:${NGINX_TAG:-latest}
     ports:
       - "80:80"
@@ -100,6 +109,7 @@ services:
 
   # One-shot job to sync FE dist from artifact image to shared volume
   frontend:
+    <<: *default-dns
     image: ${FRONTEND_IMAGE:-ghcr.io/minjungw00/web-project-frontend}:${FE_TAG:-latest}
     command:
       [

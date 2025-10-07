@@ -1,6 +1,13 @@
 name: web_project-dev
+
+x-default-dns: &default-dns
+  dns:
+    - ${COMPOSE_DNS1:-1.1.1.1}
+    - ${COMPOSE_DNS2:-8.8.8.8}
+
 services:
   frontend:
+    <<: *default-dns
     build:
       context: ../..
       dockerfile: infra/docker/frontend/Dockerfile.dev
@@ -27,6 +34,7 @@ services:
 
   # Optional: build frontend dist continuously and share with Nginx
   fe-builder:
+    <<: *default-dns
     build:
       context: ../..
       dockerfile: infra/docker/frontend/Dockerfile.dev
@@ -51,6 +59,7 @@ services:
       - web-net
 
   backend:
+    <<: *default-dns
     build:
       context: ../..
       dockerfile: infra/docker/backend/Dockerfile.dev
@@ -73,6 +82,7 @@ services:
       - web-net
 
   mysql:
+    <<: *default-dns
     build:
       context: ../..
       dockerfile: infra/docker/mysql/Dockerfile
@@ -95,6 +105,7 @@ services:
       - web-net
 
   nginx:
+    <<: *default-dns
     build:
       context: ../..
       dockerfile: infra/docker/nginx/Dockerfile.dev

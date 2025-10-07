@@ -120,6 +120,13 @@
   - `default.dev.conf`, 포트 80. `/`는 FE 정적, `/api/`는 BE 프록시.
 - 개발 통합
   - `infra/docker/docker-compose.dev.yml`로 FE/BE/DB/Nginx를 통합 구동/중지.
+  - compose 실행 시에는 컨테이너 내부 사용자 UID/GID를 호스트 사용자와 일치시켜야 한다. 그렇지 않으면 작업 디렉터리(`frontend`, `backend`)의 소유권이 `ubuntu:lxd` 등으로 변경될 수 있다. 다음과 같이 현재 사용자의 UID/GID를 넘겨 실행한다.
+
+    ```bash
+    LOCAL_UID=$(id -u) LOCAL_GID=$(id -g) docker compose -f infra/docker/docker-compose.dev.yml up -d
+    ```
+
+    `--env-file infra/docker/.env.dev` 등을 사용하는 경우에도 동일한 값을 선언해 둔다.
 
 ### 4.2 배포(운영)
 
@@ -225,6 +232,7 @@ ${HOME}/srv/web_project
       - `MYSQL_IMAGE=mysql`
     - 프론트 dist 경로: `FE_DIST_PATH=/opt/dist`
     - 네트워크/볼륨 이름(변경 비권장): `COMPOSE_NETWORK=webnet`
+    - DNS 서버(필요 시): `COMPOSE_DNS1=1.1.1.1`, `COMPOSE_DNS2=8.8.8.8`
     - 마운트 소스 (절대 경로 지정 시 bind, 상대/단순 이름은 named volume):
       - `MYSQL_DATA_MOUNT=mysql-data`
       - `CERTBOT_MOUNT=certbot`
@@ -355,6 +363,14 @@ Compose에서는 `depends_on: condition: service_healthy`로 기동 순서/교�
 4. 발급 후 `docker compose -f docker-compose.prod.yml up -d nginx`를 재실행하거나
    `docker compose exec nginx nginx -s reload`로 설정을 재적용한다.
 5. 정기 갱신은 동일 스크립트를 실행하거나, 크론으로 `certbot-issue.sh --base-dir ${HOME}/srv/web_project --dry-run`을 주기적으로 실행해 상태를 확인한다.
+
+### 9.6 DNS 문제 대응
+
+- Docker 데몬 로그에 `No non-localhost DNS nameservers are left in resolv.conf`가 반복되면 호스트의 `/etc/resolv.conf`가 `127.0.0.1` 같은 루프백 주소만 포함하고 있을 가능성이 높다. 컨테이너는 해당 주소에 접근할 수 없으므로 Docker가 외부 기본 DNS(8.8.8.8 등)로 대체하며, 방화벽 정책에 따라 네임 해석이 실패할 수 있다.
+- 해결 방법
+  - (권장) 호스트의 DNS 설정을 점검하여 `/run/systemd/resolve/resolv.conf` 등 실제 업스트림 네임 서버 목록을 노출하도록 조정한다.
+  - 또는 이 레포의 Compose 파일에서 제공하는 `COMPOSE_DNS1`, `COMPOSE_DNS2` 환경변수를 사용하여 컨테이너가 직접 사용할 DNS를 지정한다. 값 변경 후 `docker compose up -d`로 컨테이너를 재기동하면 설정이 반영된다.
+  - 기업 네트워크처럼 사설 DNS가 필요한 경우 방화벽에서 허용된 주소를 지정해야 한다.
 
 ---
 
