@@ -47,6 +47,17 @@ jobs:
           target: ~/srv/web_project/
           strip_components: 2
 
+      - name: Upload deployment script to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          source: infra/deploy-blue-green.sh
+          target: ~/srv/web_project/
+          strip_components: 0
+
       - name: Execute deployment on server
         uses: appleboy/ssh-action@v1
         with:
@@ -82,9 +93,5 @@ jobs:
             fi
 
             cd "$WORKDIR"
-            docker compose -f docker-compose.prod.yml --env-file .env pull
-            # Always refresh FE dist from artifact image before starting services
-            docker compose -f docker-compose.prod.yml --env-file .env run --rm frontend
-            docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans
-            # FE dist 추출 job은 depends_on: service_completed_successfully로 연계되어 최초 up 시 자동 실행됨
-            docker image prune -f --filter "label=org.opencontainers.image.source=https://github.com/${{ github.repository }}"
+            chmod +x infra/deploy-blue-green.sh
+            infra/deploy-blue-green.sh

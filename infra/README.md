@@ -4,7 +4,7 @@
 
 이 문서는 React(Frontend) + Spring Boot(Backend) + MySQL + Nginx 기반 웹 프로젝트의 CI/CD 전략을 정의한다.
 목표는 CI에서 불변 이미지를 생성해 GHCR에 저장하고, CD에서 서버에 배포하여 안정성과 재현성을 보장하는 것이다.
-또한 헬스체크, 롤백, 무중단 배포(옵션), 모니터링으로 운영 안정성을 강화한다.
+또한 헬스체크, 롤백, 무중단 배포(Blue-Green), 모니터링으로 운영 안정성을 강화한다.
 
 핵심 원칙
 
@@ -187,10 +187,12 @@
 
 ## 7. 서버 구성(필수 파일/디렉토리)
 
-운영 환경에서는 certbot과 mysql 데이터는 호스트 바인드 마운트를 기본으로 한다(백업/복구 및 인증서 관리 용이). FE dist는 기본적으로 named volume을 사용하며, 필요 시 호스트 바인드로 전환할 수 있다. `.env` 파일들은 항상 호스트에 있어야 한다.
+운영 환경에서는 certbot과 mysql 데이터는 호스트 바인드 마운트를 기본으로 한다(백업/복구 및 인증서 관리 용이). FE dist는 기본적으로 named volume을 사용하며, 필요 시 호스트 바인드로 전환할 수 있다. `.env` 파일들은 항상 호스트에 있어야 한다. 배포 전략에 따라 `docker-compose.prod.yml`과 `deploy-blue-green.sh`는 서버 루트(`${HOME}/srv/web_project/`)에 위치한다.
 
 ```
 ${HOME}/srv/web_project
+  docker-compose.prod.yml   # 배포용 Compose 파일
+  deploy-blue-green.sh      # Blue/Green 배포 스크립트
   /backend
     .env.production   # 운영 환경변수 (비밀 포함)
   /nginx
@@ -212,12 +214,12 @@ ${HOME}/srv/web_project
 
 ### 8.1 원칙 요약
 
-- 이미지는 비밀을 포함하지 않는다. 모든 비밀은 런타임에만 주입한다.
-- Frontend `frontend/.env.production`은 공개값만 포함(빌드 전용)하며 서버에는 필요 없다.
-- Backend `backend/.env.production`은 비밀 포함, Git 미추적, 서버에만 배치한다.
-- 서버 루트 `${HOME}/srv/web_project/.env`는 Compose 변수 확장(태그/이미지/DB 등)에 사용한다.
-- Nginx `infra/nginx/.env.production`에는 비밀을 넣지 않는다(서버명/경로 등 공개 설정만). 레포에는 `.example`만 커밋한다.
-- MySQL 비밀번호 등은 서버 루트 `.env`(또는 Secrets)로 관리한다. 인증서는 파일/볼륨(certbot)로 관리한다.
+- **이미지에는 비밀을 포함하지 않는다.** 모든 비밀은 런타임에만 주입한다.
+- **Frontend 빌드 환경은 공개값만 포함한다.** `frontend/.env.production`은 공개 `VITE_*` 값만 저장하고 서버에는 배포하지 않는다.
+- **Backend 운영 환경변수는 Git에 포함하지 않는다.** `backend/.env.production`은 비밀을 담고 서버에만 배치한다.
+- **루트 `.env`는 Compose 변수 확장의 단일 진실 원천이다.** `${HOME}/srv/web_project/.env`에서 태그, 이미지, 공용 환경을 관리한다.
+- **Nginx 템플릿 파일에는 비밀을 넣지 않는다.** `infra/nginx/.env.production`에는 도메인, 경로 등 공개 정보를 기록하고 `.example` 템플릿만 커밋한다.
+- **DB 자격 증명은 Secrets 또는 루트 `.env`에서만 관리한다.** 인증서는 certbot/letsencrypt 볼륨으로 분리 관리한다.
 
 ### 8.2 서버에 필요한 .env 파일과 역할
 
@@ -253,7 +255,7 @@ ${HOME}/srv/web_project
     - `NGINX_SERVER_NAME=example.com`
     - `NGINX_CERTBOT_ROOT=/var/www/certbot`
     - `NGINX_STATIC_ROOT=/usr/share/nginx/html`
-    - `NGINX_BACKEND_HOST=backend`
+    - `NGINX_BACKEND_HOST=backend-blue` (최초 배포 시 기본값, 배포 스크립트가 자동 전환)
     - `NGINX_BACKEND_PORT=8080`
   - `NGINX_SSL_CERT=/etc/letsencrypt/live/<domain>/fullchain.pem`
   - `NGINX_SSL_CERT_KEY=/etc/letsencrypt/live/<domain>/privkey.pem`
@@ -311,7 +313,7 @@ ${HOME}/srv/web_project
 
 ### 9.1 헬스체크
 
-- FE(Nginx): `/healthz` 정적 200 → `curl -f http://localhost/healthz`
+- FE(Nginx): `/healthz` 정적 200 → `curl -f http://localhost/healthz` (Nginx `location = /healthz` 블록이 `return 200 'ok'`로 즉시 응답하며, HTTP/HTTPS 모두 동일 동작)
   - 파라미터: `interval: 5s`, `timeout: 2s`, `retries: 3`, `start_period: 5s`
 - BE(Spring Boot): Actuator `/actuator/health`
   - 예: `curl -f http://localhost:8080/actuator/health`
@@ -323,10 +325,40 @@ Compose에서는 `depends_on: condition: service_healthy`로 기동 순서/교�
 
 ### 9.2 무중단 배포(Blue-Green)
 
-- 두 개의 Compose 프로젝트(`-p webapp_blue`, `-p webapp_green`)를 운영
-- 새로운 스택(Green) 기동 → 헬스 체크 통과 → Nginx upstream을 Green으로 전환 후 `nginx -s reload` → Blue 종료
-- Nginx는 단일 진입점으로 유지, 애플리케이션 계층만 Blue/Green으로 교체
-- 포트 충돌 방지를 위해 Blue/Green 스택은 내부 네트워크만 사용하고 외부 노출은 Nginx에서만 처리
+#### 9.2.1 구성 개념
+
+- 무중단 배포는 동일한 인프라를 두 개의 색상(Blue/Green) 스택으로 이원화하고, 활성 스택과 대기 스택을 교차시키는 Blue-Green 전략을 사용한다.
+- `infra/docker/docker-compose.prod.yml`은 하나의 Compose 프로젝트 안에 `backend-blue`, `backend-green`, `frontend-blue`, `frontend-green` 서비스를 모두 정의한다. 두 backend 중 하나만 실행하며, FE dist 동기화는 색상별 job으로 수행한다.
+- `mysql`, `nginx`, `frontend-dist` 볼륨, `certbot` 볼륨은 단일 인스턴스를 공유한다. 따라서 데이터/인증서는 공용이며, 색상 전환 시 backend 애플리케이션만 교체된다.
+- Nginx 업스트림은 환경변수(`NGINX_BACKEND_HOST`)로 현재 활성 스택의 backend 서비스명을 참조한다. 색상 전환 시 해당 값을 `backend-blue` 또는 `backend-green`으로 갱신하고 nginx를 재기동(또는 reload)한다.
+
+#### 9.2.2 준비 사항
+
+- 서버에는 `~/srv/web_project` 기준으로 Compose 파일(`docker-compose.prod.yml`), `.env`, `backend/.env.production`, `nginx/.env.production`이 존재해야 한다.
+- GitHub Actions가 업로드하는 `infra/deploy-blue-green.sh`를 서버에서 실행 가능하도록 `chmod +x` 권한을 부여한다. 스크립트는 자동으로 `SERVER_ROOT`를 `~/srv/web_project`로 설정한다.
+- `.env` 파일에 기본 태그(`FE_TAG`, `BE_TAG`, `NGINX_TAG`, `DB_TAG`)가 정의되어야 하며, 배포 시 새 태그를 환경변수로 덮어써서 새로운 이미지를 선택한다.
+- 최초 1회 `docker compose -f docker-compose.prod.yml --env-file .env up -d mysql nginx`를 실행해 데이터베이스와 Nginx 인프라 서비스를 기동한다. 이후부터는 스크립트가 backend와 frontend dist만 교체한다.
+- 초기 배포 시 `nginx/.env.production`의 `NGINX_BACKEND_HOST`가 `backend-blue`로 설정돼 있어야 하며, 활성 색상을 찾을 수 없을 때 스크립트는 자동으로 blue를 선택한다.
+
+#### 9.2.3 배포 절차
+
+1. **색상 결정**: `deploy-blue-green.sh`가 `nginx/.env.production`의 `NGINX_BACKEND_HOST` 값 또는 현재 실행 중인 컨테이너를 읽어 활성 색상을 판별한다. 활성 색상이 `blue`면 다음 배포 타깃은 `green`, 반대도 동일하다.
+2. **이미지 준비**: CI가 `latest`와 `sha-<GITHUB_SHA>` 태그를 푸시한 뒤, 스크립트가 자동으로 `docker compose pull backend-<색상> frontend-<색상> nginx mysql`을 호출해 필요한 이미지를 가져온다(옵션 `--skip-pull`로 생략 가능).
+3. **대기 스택 기동**: `docker compose up -d backend-<색상>`으로 새 backend를 띄우고 헬스체크가 통과할 때까지 대기한다. 헬스체크 실패 시 즉시 배포를 중단한다.
+4. **FE dist 동기화**: `docker compose run --rm frontend-<색상>`으로 FE dist를 공유 볼륨에 덮어쓴다. dist가 없으면 배포가 실패하므로 CI 산출물을 확인한다.
+5. **트래픽 전환**: 스크립트가 `nginx/.env.production`의 `NGINX_BACKEND_HOST`를 새 색상으로 업데이트한 뒤 `docker compose up -d nginx`를 호출해 컨테이너를 재시작한다.
+6. **검증 및 모니터링**: `docker compose exec nginx wget -qO- http://localhost/healthz`를 반복 실행해 헬스 체크가 통과하는지 확인한다. 실패 시 스크립트가 자동으로 이전 색상으로 롤백하고 종료한다.
+7. **구 스택 정리**: 새 스택이 안정화된 경우에만 `docker compose stop backend-<이전색상>` → `docker compose rm -f backend-<이전색상>`으로 이전 backend를 정리하고 `docker image prune --filter "dangling=true" --force`로 사용하지 않는 이미지를 삭제한다.
+
+#### 9.2.4 자동화 팁
+
+- `infra/deploy-blue-green.sh` 스크립트는 색상 전환 로직, 헬스 체크, nginx 롤백까지 포함하므로 워크플로우에서는 해당 스크립트만 호출하면 된다. 필요 시 `--color blue` 옵션으로 특정 색상 강제 배포가 가능하다.
+- GitHub Actions `deploy.yml` 워크플로는 서버에서 스크립트를 실행하도록 구성되어 있다. 활성 색상 탐지가 실패하면 기본값인 `blue`로 초기화하므로, 초기 배포 시에도 별도 인자 없이 실행할 수 있다.
+- DB 마이그레이션이 필요한 경우 스크립트 실행 전에 수행하거나 Liquibase/Flyway를 사용해 양쪽 색상에서 호환되는 스키마를 유지한다.
+- 장기 실행 배치는 색상별 컨테이너에서 중복 실행될 수 있으므로, 배포 전에 종료하거나 스케줄러를 조정해 두 색상 중 하나에서만 실행되도록 한다.
+- DB 스키마 변경은 **Expand → Migrate → Contract** 순서를 따른다. 먼저 스키마를 확장(Expand)해 두 색상 모두 동작 가능하게 만들고, 새 코드 배포 후 데이터를 이전(Migrate)한 뒤, 더 이상 사용하지 않는 컬럼/제약을 제거(Contract)한다.
+
+위 전략을 통해 배포 시점에 Nginx가 바라보는 backend 대상만 전환하므로 외부 트래픽은 끊기지 않으며, 문제가 발생하면 스크립트가 즉시 이전 색상으로 롤백한다.
 
 ### 9.3 롤백
 
@@ -380,6 +412,11 @@ Compose에서는 `depends_on: condition: service_healthy`로 기동 순서/교�
 
 ### 10.1 사전 준비(1회)
 
+- 빠른 순서 요약
+  1. GitHub 저장소에 Secrets(`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `ROOT_ENV_BASE64` 등)을 등록한다.
+  2. 서버에서 `${HOME}/srv/web_project`와 하위 디렉터리(`backend`, `nginx`, `mysql`, `mysql/init`)를 생성한다.
+  3. `sync-env` 워크플로우 또는 수동 명령으로 `.env`, `backend/.env.production`, `nginx/.env.production`을 배포하고, 최초 `docker compose -f docker-compose.prod.yml --env-file .env up -d mysql nginx`를 실행한다.
+
 - GitHub Secrets 설정
   - `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`(PEM)
   - `ROOT_ENV_BASE64`, `BACKEND_ENV_PRODUCTION_BASE64`, `NGINX_ENV_PRODUCTION_BASE64`
@@ -411,7 +448,7 @@ Compose에서는 `depends_on: condition: service_healthy`로 기동 순서/교�
 
 - 실행: `.github/workflows/deploy.yml`
 - 입력값(선택): `image_tag`(공통), `fe_tag`/`be_tag`/`nginx_tag`/`db_tag`(개별)
-- 동작: compose 파일 업로드 → `docker compose pull` → FE 추출(job, rsync) → `docker compose up -d --remove-orphans` → 라벨 기준 이미지 정리
+- 동작: compose 파일과 `infra/deploy-blue-green.sh` 업로드 → 서버에서 태그 환경변수를 설정 → `infra/deploy-blue-green.sh` 실행으로 자동 색상 전환 → 필요 시 실패 시 알람 → Docker dangling 이미지 정리
 
 4. 헬스 확인(선택)
 
