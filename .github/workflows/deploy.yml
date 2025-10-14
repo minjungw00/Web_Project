@@ -56,7 +56,7 @@ jobs:
           port: ${{ env.DEPLOY_PORT }}
           source: infra/deploy-blue-green.sh
           target: ~/srv/web_project/
-          strip_components: 0
+          strip_components: 1
 
       - name: Execute deployment on server
         uses: appleboy/ssh-action@v1
@@ -93,5 +93,5 @@ jobs:
             fi
 
             cd "$WORKDIR"
-            chmod +x infra/deploy-blue-green.sh
-            infra/deploy-blue-green.sh
+            chmod +x deploy-blue-green.sh
+            ./deploy-blue-green.sh
