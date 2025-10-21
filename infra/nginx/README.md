@@ -1,6 +1,6 @@
 # Nginx 구성 가이드
 
-이 문서는 `infra/nginx` 디렉터리에 포함된 템플릿과 스크립트를 기반으로 운영 Nginx 컨테이너의 동작을 설명합니다. 전체 배포 흐름은 `infra/README.md`를 참고하고, 이 문서는 Nginx 레이어에 특화된 세부 설정을 다룹니다.
+이 문서는 `infra/nginx` 디렉터리에 포함된 템플릿과 스크립트를 기반으로 운영 Nginx 컨테이너의 동작을 설명합니다. 전체 배포 흐름은 `infra/docs/operations.md`를 참고하고, 이 문서는 Nginx 레이어에 특화된 세부 설정을 다룹니다.
 
 ---
 
@@ -15,7 +15,7 @@
   - 백엔드 프록시에 공통으로 적용되는 헤더 설정을 모듈화한 스니펫입니다.
 - `docker-entrypoint.d/99-envsubst.sh`
   - 컨테이너 기동 시 `envsubst`를 통해 위 템플릿을 `/etc/nginx/conf.d/default.conf`로 렌더링합니다.
-  - 사용 가능한 환경 변수: `NGINX_SERVER_NAME`, `NGINX_CERTBOT_ROOT`, `NGINX_STATIC_ROOT`, `NGINX_STATIC_CACHE_EXPIRES`, `NGINX_STATIC_CACHE_CONTROL`, `NGINX_BACKEND_HOST`, `NGINX_BACKEND_PORT`, `NGINX_FRONTEND_UPSTREAM`, `NGINX_SSL_CERT`, `NGINX_SSL_CERT_KEY`, `NGINX_SSL_TRUSTED_CERT`.
+  - 사용 가능한 환경 변수: `NGINX_SERVER_NAME`, `NGINX_CERTBOT_ROOT`, `NGINX_STATIC_ROOT`, `NGINX_STATIC_CACHE_EXPIRES`, `NGINX_STATIC_CACHE_CONTROL`, `NGINX_BACKEND_HOST`, `NGINX_BACKEND_PORT`, `NGINX_SSL_CERT`, `NGINX_SSL_CERT_KEY`, `NGINX_SSL_TRUSTED_CERT`.
 
 ---
 
@@ -122,6 +122,6 @@ cd ~/srv/web_project
 
 ## 7. 참고 자료
 
-- 전체 인프라 아키텍처 및 배포 절차: `infra/README.md`
+- 전체 인프라 아키텍처 및 배포 절차: `infra/docs/operations.md`
 - Docker Compose 운영 설정: `infra/docker/docker-compose.prod.yml`
-- Certbot 호스트 경로 정책: `infra/README.md`의 "Certbot 인증서 발급/갱신" 섹션
+- Certbot 호스트 경로 정책: `infra/docs/operations.md`의 "Certbot 인증서 발급/갱신" 섹션
