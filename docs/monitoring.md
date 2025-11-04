@@ -87,7 +87,8 @@ infra/
    FLUSH PRIVILEGES;
    ```
 
-   `.env.monitoring.*` 파일에서 `MYSQL_EXPORTER_DSN=monitoring:change-me@(mysql:3306)/` 형태로 설정합니다.
+`mysqld-exporter/.my.cnf.*` 파일에 모니터링 전용 계정 자격 증명을 저장하고,
+필요 시 `.env.monitoring.*`의 `MYSQL_EXPORTER_ADDRESS` 값을 MySQL 호스트:포트로 맞춥니다(기본 `mysql:3306`).
 
 2. **Nginx stub_status 노출 확인**
 
@@ -164,9 +165,9 @@ scrape_configs:
 | `ALERTMANAGER_SMTP_FROM`         | `monitor@web-project.dev`                                    | Email 사용 시 | Alertmanager      | 발신 주소                                                       |
 | `ALERTMANAGER_SMTP_USERNAME`     | `monitor`                                                    | Email 사용 시 | Alertmanager      | SMTP 인증 계정                                                  |
 | `ALERTMANAGER_SMTP_PASSWORD`     | `change-me`                                                  | Email 사용 시 | Alertmanager      | 비밀번호는 Secrets Manager 또는 서버 `.env`에서 관리            |
-| `MYSQL_EXPORTER_DSN`             | `monitoring:password@(mysql:3306)/`                          | 예            | mysqld-exporter   | 최소 권한 계정 사용                                             |
+| `MYSQL_EXPORTER_ADDRESS`         | `mysql:3306`                                                 | 예            | mysqld-exporter   | 호스트/포트만 환경 변수로 관리, 자격 증명은 .my.cnf.\* 사용     |
 | `NGINX_EXPORTER_SCRAPE_URI`      | `http://nginx/nginx_status`                                  | 예            | nginx-exporter    | `stub_status` 위치와 일치                                       |
-| `PROMTAIL_POSITIONS_PATH`        | `/tmp/positions.yaml`                                        | 아니오        | Promtail          | 호스트 볼륨 사용 시 경로 조정                                   |
+| `PROMTAIL_POSITIONS_MOUNT`       | `promtail-positions`                                         | 아니오        | Promtail          | 호스트 또는 named volume 경로                                   |
 
 민감한 값은 Git에 커밋하지 말고 서버 `.env.monitoring.prod`에서만 관리하세요.
 

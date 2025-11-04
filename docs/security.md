@@ -446,7 +446,6 @@ port=3306
 | 변수               | 설명                              | 기본값                       |
 | ------------------ | --------------------------------- | ---------------------------- |
 | `SERVER_ROOT`      | 서버 배포 루트 경로               | `${HOME}/srv/web_project`    |
-| `IMAGE_REGISTRY`   | 기본 이미지 레지스트리            | `ghcr.io/minjungw00`         |
 | `COMPOSE_DNS1`     | DNS 서버 1                        | `1.1.1.1`                    |
 | `COMPOSE_DNS2`     | DNS 서버 2                        | `8.8.8.8`                    |
 | `APP_NETWORK_NAME` | 외부 네트워크 이름                | `web_project_webnet`         |
