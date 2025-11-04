@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
   cat <<EOF
-Usage: certbot-issue.sh -d <domain> [-d <another-domain> ...] -e <email> [--base-dir <path>] [--staging] [--dry-run]
+Usage: certbot-issue.sh -d <domain> [-d <another-domain> ...] -e <email> [--base-dir <path>] [--staging] [--dry-run] [--quiet]
 
 Issue or renew Let's Encrypt certificates using the certbot/certbot container.
 Options:
@@ -14,6 +14,7 @@ Options:
   --base-dir  Base directory that contains certbot, letsencrypt/etc|lib|log (default: script directory).
   --staging   Use Let's Encrypt staging environment (rate-limit safe).
   --dry-run   Perform a dry-run renewal to validate configuration.
+  -q, --quiet  Reduce logging output and pass --quiet to certbot.
   -h, --help      Show this help message.
 
 Environment overrides:
@@ -31,6 +32,7 @@ EMAIL=""
 STAGING=0
 DRY_RUN=0
 BASE_DIR_INPUT=""
+QUIET=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -55,6 +57,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --dry-run)
       DRY_RUN=1
+      shift
+      ;;
+    --quiet|-q)
+      QUIET=1
       shift
       ;;
     -h|--help)
@@ -107,11 +113,17 @@ if [[ $DRY_RUN -eq 1 ]]; then
   CERTBOT_ARGS+=(--dry-run)
 fi
 
+if [[ $QUIET -eq 1 ]]; then
+  CERTBOT_ARGS+=(--quiet)
+fi
+
 for domain in "${DOMAINS[@]}"; do
   CERTBOT_ARGS+=(-d "$domain")
 done
 
-echo "Running certbot for domains: ${DOMAINS[*]}"
+if [[ $QUIET -ne 1 ]]; then
+  echo "Running certbot for domains: ${DOMAINS[*]}"
+fi
 docker run --rm \
   -v "${WEBROOT}:/var/www/certbot" \
   -v "${ETC_DIR}:/etc/letsencrypt" \
