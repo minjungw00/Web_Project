@@ -46,7 +46,7 @@ jobs:
           username: ${{ env.DEPLOY_USER }}
           key: ${{ env.DEPLOY_SSH_KEY }}
           port: ${{ env.DEPLOY_PORT }}
-          source: infra/gateway/nginx/*.conf,infra/gateway/nginx/certbot-issue.sh
+          source: infra/gateway/nginx/*.conf,infra/gateway/nginx/.env.production,infra/gateway/nginx/certbot-issue.sh
           target: ~/srv/web_project/gateway/
           strip_components: 2
 
@@ -89,7 +89,7 @@ jobs:
                 if [ -n "$cid" ]; then
                   status=$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo "")
                   case "$status" in
-                    healthy|)
+                    healthy|"")
                       echo "$candidate"
                       return 0
                       ;;
