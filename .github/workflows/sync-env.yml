@@ -55,7 +55,7 @@ jobs:
             write_if_present "$NGINX_ENV_B64" "$WORKDIR/gateway/nginx/.env.production"   "gateway/nginx/.env.production"
             write_if_present "$MON_ENV_B64"   "$WORKDIR/monitoring/.env.monitoring.prod" "monitoring/.env.monitoring.prod"
             write_if_present "$MYSQLD_EXPORTER_CNF_B64" "$WORKDIR/monitoring/mysqld-exporter/.my.cnf.prod" "monitoring/mysqld-exporter/.my.cnf.prod" 644
-            write_if_present "$NGINX_HTPASSWD_B64" "$WORKDIR/gateway/nginx/monitoring.htpasswd.prod" "gateway/nginx/monitoring.htpasswd.prod"
+            write_if_present "$NGINX_HTPASSWD_B64" "$WORKDIR/gateway/nginx/monitoring.htpasswd.prod" "gateway/nginx/monitoring.htpasswd.prod" 644
             write_if_present "$INFRA_ENV_B64" "$WORKDIR/infrastructure/.env.infrastructure.prod" "infrastructure/.env.infrastructure.prod"
 
             echo "[sync-env] done"

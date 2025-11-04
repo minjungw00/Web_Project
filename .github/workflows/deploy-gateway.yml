@@ -96,7 +96,7 @@ jobs:
               local tmp="${target}.tmp"
               printf '%s' "$b64" | base64 -d > "$tmp"
               if [ ! -f "$target" ] || ! cmp -s "$tmp" "$target"; then
-                install -m 600 "$tmp" "$target"
+                install -m 644 "$tmp" "$target"
                 HTPASSWD_UPDATED=1
                 echo "[deploy-gateway] monitoring.htpasswd synced from secret"
               fi
