@@ -1,0 +1,205 @@
+name: web_project-monitoring
+
+x-default-dns: &default-dns
+  dns:
+    - ${COMPOSE_DNS1:-1.1.1.1}
+    - ${COMPOSE_DNS2:-8.8.8.8}
+
+services:
+  prometheus:
+    <<: *default-dns
+    image: prom/prometheus:latest
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+      - ${PROMETHEUS_DATA_MOUNT:-prometheus-data}:/prometheus
+    expose:
+      - "9090"
+    depends_on:
+      - node-exporter
+      - cadvisor
+      - nginx-exporter
+      - mysqld-exporter
+      - blackbox-exporter
+    networks:
+      - webnet
+
+  alertmanager:
+    <<: *default-dns
+    image: prom/alertmanager:latest
+    entrypoint: /bin/sh
+    command:
+      - -ec
+      - |
+        set -eu
+        escape() {
+          printf '%s' "$$1" | sed -e 's/[\\/&|]/\\&/g'
+        }
+        tmp_file=$$(mktemp)
+        awk '
+          BEGIN {
+            repl["$${ALERTMANAGER_SLACK_WEBHOOK_URL}"] = ENVIRON["ALERTMANAGER_SLACK_WEBHOOK_URL"]
+            repl["$${ALERTMANAGER_SLACK_CHANNEL}"] = ENVIRON["ALERTMANAGER_SLACK_CHANNEL"]
+            repl["$${ALERTMANAGER_EMAIL_TO}"] = ENVIRON["ALERTMANAGER_EMAIL_TO"]
+            repl["$${ALERTMANAGER_SMTP_HOST}"] = ENVIRON["ALERTMANAGER_SMTP_HOST"]
+            repl["$${ALERTMANAGER_SMTP_FROM}"] = ENVIRON["ALERTMANAGER_SMTP_FROM"]
+            repl["$${ALERTMANAGER_SMTP_USERNAME}"] = ENVIRON["ALERTMANAGER_SMTP_USERNAME"]
+            repl["$${ALERTMANAGER_SMTP_PASSWORD}"] = ENVIRON["ALERTMANAGER_SMTP_PASSWORD"]
+          }
+          {
+            line = $0
+            for (pattern in repl) {
+              gsub(pattern, repl[pattern], line)
+            }
+            print line
+          }
+        ' /etc/alertmanager/config.yml > "$$tmp_file"
+        exec /bin/alertmanager --config.file="$$tmp_file" --storage.path=/alertmanager
+    environment:
+      ALERTMANAGER_SLACK_WEBHOOK_URL: ${ALERTMANAGER_SLACK_WEBHOOK_URL:?ALERTMANAGER_SLACK_WEBHOOK_URL not set}
+      ALERTMANAGER_SLACK_CHANNEL: ${ALERTMANAGER_SLACK_CHANNEL:-#web-project-alerts}
+      ALERTMANAGER_EMAIL_TO: ${ALERTMANAGER_EMAIL_TO:-ops@example.com}
+      ALERTMANAGER_SMTP_HOST: ${ALERTMANAGER_SMTP_HOST:-smtp.example.com:587}
+      ALERTMANAGER_SMTP_FROM: ${ALERTMANAGER_SMTP_FROM:-monitor@web-project.dev}
+      ALERTMANAGER_SMTP_USERNAME: ${ALERTMANAGER_SMTP_USERNAME:-monitor}
+      ALERTMANAGER_SMTP_PASSWORD: ${ALERTMANAGER_SMTP_PASSWORD:?ALERTMANAGER_SMTP_PASSWORD not set}
+    volumes:
+      - ./alertmanager/config.yml:/etc/alertmanager/config.yml:ro
+      - ${ALERTMANAGER_DATA_MOUNT:-alertmanager-data}:/alertmanager
+    expose:
+      - "9093"
+    depends_on:
+      - prometheus
+    networks:
+      - webnet
+
+  grafana:
+    <<: *default-dns
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER not set}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD not set}
+      GF_SERVER_ROOT_URL: "${GRAFANA_ROOT_URL:-https://example.com/monitoring/grafana/}"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_USERS_DEFAULT_THEME: system
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/node-exporter-full.json
+    volumes:
+      - ${GRAFANA_DATA_MOUNT:-grafana-data}:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    expose:
+      - "3000"
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - webnet
+
+  loki:
+    <<: *default-dns
+    image: grafana/loki:latest
+    command:
+      - -config.file=/etc/loki/config.yml
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml:ro
+      - ${LOKI_DATA_MOUNT:-loki-data}:/loki
+    expose:
+      - "3100"
+    networks:
+      - webnet
+
+  promtail:
+    <<: *default-dns
+    image: grafana/promtail:latest
+    command:
+      - -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/config.yml:ro
+      - ${PROMTAIL_POSITIONS_MOUNT:-promtail-positions}:/var/lib/promtail
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - webnet
+
+  node-exporter:
+    <<: *default-dns
+    image: prom/node-exporter:latest
+    command:
+      - --path.rootfs=/rootfs
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+      - --collector.filesystem.fs-types-exclude=^(sys|proc|autofs|cgroup|devpts|devtmpfs|nsfs|overlay|fuse.*|tmpfs|rpc_pipefs|mqueue)$$
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    expose:
+      - "9100"
+    networks:
+      - webnet
+
+  cadvisor:
+    <<: *default-dns
+    image: gcr.io/cadvisor/cadvisor:latest
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    expose:
+      - "8080"
+    networks:
+      - webnet
+
+  nginx-exporter:
+    <<: *default-dns
+    image: nginx/nginx-prometheus-exporter:latest
+    command:
+      - -nginx.scrape-uri=${NGINX_EXPORTER_SCRAPE_URI:-http://nginx/nginx_status}
+    expose:
+      - "9113"
+    networks:
+      - webnet
+
+  mysqld-exporter:
+    <<: *default-dns
+    image: prom/mysqld-exporter:latest
+    command:
+      - --config.my-cnf=/etc/.mysqld_exporter.cnf
+      - --mysqld.address=${MYSQL_EXPORTER_ADDRESS:-mysql:3306}
+    volumes:
+      - ./mysqld-exporter/.my.cnf.prod:/etc/.mysqld_exporter.cnf:ro
+    expose:
+      - "9104"
+    networks:
+      - webnet
+
+  blackbox-exporter:
+    <<: *default-dns
+    image: prom/blackbox-exporter:latest
+    expose:
+      - "9115"
+    networks:
+      - webnet
+
+networks:
+  webnet:
+    name: ${APP_NETWORK_NAME:-web_project_webnet}
+    external: true
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  promtail-positions:
+  alertmanager-data:

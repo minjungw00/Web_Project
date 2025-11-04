@@ -1,0 +1,96 @@
+name: deploy-monitoring
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_images:
+        description: "컨테이너 이미지 pull 수행 여부"
+        required: false
+        default: "true"
+      recreate:
+        description: "강제 재생성(--force-recreate)"
+        required: false
+        default: "false"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload monitoring stack to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          source: infra/monitoring/**
+          target: ~/srv/web_project/monitoring/
+          strip_components: 2
+
+      - name: Deploy monitoring on server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          script: |
+            set -euo pipefail
+            WORKDIR="$HOME/srv/web_project/monitoring"
+            ROOTDIR="$HOME/srv/web_project"
+            mkdir -p "$WORKDIR"
+
+            # Export SERVER_ROOT to align with compose variable resolution if needed
+            export SERVER_ROOT="$ROOTDIR"
+
+            cd "$WORKDIR"
+            ENV_FILE=".env.monitoring.prod"
+            if [ ! -f "$ENV_FILE" ]; then
+              echo "[deploy-monitoring] ERROR: $ENV_FILE not found. Run sync-env first." >&2
+              exit 1
+            fi
+
+            # Ensure external network exists (use APP_NETWORK_NAME from env file if provided)
+            # Extract last assignment to handle duplicates; strip optional quotes
+            APP_NETWORK_NAME_FROM_ENV=$(grep -E '^[[:space:]]*APP_NETWORK_NAME=' "$ENV_FILE" | tail -n1 | sed -e 's/^[^=]*=\s*//' -e 's/^"\|\"//g' -e 's/"\|\"$//g' || true)
+            if [ -n "${APP_NETWORK_NAME_FROM_ENV:-}" ]; then
+              APP_NETWORK_NAME="$APP_NETWORK_NAME_FROM_ENV"
+            else
+              APP_NETWORK_NAME="web_project_webnet"
+            fi
+            docker network create "$APP_NETWORK_NAME" >/dev/null 2>&1 || true
+
+            # Merge root ../.env and stack env into a temporary file for compose variable expansion
+            MERGED_ENV=".env.merged"
+            ROOT_ENV="../.env.server"
+            if [ -f "../.env.server.prod" ]; then
+              ROOT_ENV="../.env.server.prod"
+            fi
+            {
+              if [ -f "$ROOT_ENV" ]; then sed -e '/^\s*#/d' -e '/^\s*$/d' "$ROOT_ENV"; fi
+              sed -e '/^\s*#/d' -e '/^\s*$/d' "$ENV_FILE"
+            } > "$MERGED_ENV"
+            chmod 600 "$MERGED_ENV" 2>/dev/null || true
+
+            COMPOSE_FILE="docker-compose.monitoring.prod.yml"
+            if [ "${{ inputs.pull_images }}" = "true" ]; then
+              docker compose -f "$COMPOSE_FILE" --env-file "$MERGED_ENV" pull || true
+            fi
+
+            RECREATE_FLAG=""
+            if [ "${{ inputs.recreate }}" = "true" ]; then
+              RECREATE_FLAG="--force-recreate"
+            fi
+
+            docker compose -f "$COMPOSE_FILE" --env-file "$MERGED_ENV" up -d $RECREATE_FLAG
+
+            rm -f "$MERGED_ENV"
+            echo "[deploy-monitoring] done"

@@ -1,0 +1,54 @@
+name: web_project-gateway
+
+x-default-dns: &default-dns
+  dns:
+    - ${COMPOSE_DNS1:-1.1.1.1}
+    - ${COMPOSE_DNS2:-8.8.8.8}
+
+services:
+  nginx:
+    <<: *default-dns
+    image: ${NGINX_IMAGE:-ghcr.io/minjungw00/web-project-nginx}:${NGINX_TAG:-latest}
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - ./nginx/.env.production
+    volumes:
+      - ${CERTBOT_MOUNT:-certbot}:/var/www/certbot
+      - ${FE_DIST_MOUNT:-frontend-dist}:/usr/share/nginx/html:ro
+      - ${LETSENCRYPT_MOUNT:-letsencrypt}:/etc/letsencrypt
+      - ${LETSENCRYPT_LOG_MOUNT:-letsencrypt-log}:/var/log/letsencrypt
+      - ${NGINX_MONITORING_HTPASSWD_FILE:-./nginx/monitoring.htpasswd.prod}:/etc/nginx/secrets/monitoring.htpasswd:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost/healthz >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - webnet
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  webnet:
+    name: ${APP_NETWORK_NAME:-web_project_webnet}
+    external: true
+    driver: bridge
+
+volumes:
+  frontend-dist:
+    external: true
+    name: web_project-frontend-dist
+  certbot:
+  letsencrypt:
+  letsencrypt-log:

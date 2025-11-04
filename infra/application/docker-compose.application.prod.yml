@@ -1,0 +1,88 @@
+name: web_project-application
+
+x-default-dns: &default-dns
+  dns:
+    - ${COMPOSE_DNS1:-1.1.1.1}
+    - ${COMPOSE_DNS2:-8.8.8.8}
+
+x-backend-common: &backend-common
+  <<: *default-dns
+  image: ${BACKEND_IMAGE:-ghcr.io/minjungw00/web-project-backend}:${BE_TAG:-latest}
+  env_file:
+    - ${SERVER_ROOT:-$HOME/srv/web_project}/application/backend/.env.production
+  volumes:
+    - ${SERVER_ROOT:-$HOME/srv/web_project}/application/backend/logs:/app/logs
+    - ${SERVER_ROOT:-$HOME/srv/web_project}/application/backend/config:/app/config:ro
+  expose:
+    - "8080"
+  healthcheck:
+    test:
+      [
+        "CMD-SHELL",
+        "curl -fsS http://localhost:8080/api/actuator/health || exit 1",
+      ]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 20s
+  restart: unless-stopped
+  networks:
+    - webnet
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-frontend-job: &frontend-job
+  <<: *default-dns
+  image: ${FRONTEND_IMAGE:-ghcr.io/minjungw00/web-project-frontend}:${FE_TAG:-latest}
+  command:
+    [
+      "sh",
+      "-c",
+      'set -euo pipefail; src=${FE_DIST_PATH:-/opt/dist}; dest=/dist; mkdir -p "$$dest"; if [ -d "$$src" ]; then rsync -a --delete "$$src"/ "$$dest"/; else echo "FE dist not found at $$src"; exit 1; fi',
+    ]
+  volumes:
+    - ${FE_DIST_MOUNT:-frontend-dist}:/dist
+  restart: "no"
+  networks:
+    - webnet
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  backend-blue:
+    <<: *backend-common
+    networks:
+      webnet:
+        aliases:
+          - backend-blue
+
+  backend-green:
+    <<: *backend-common
+    networks:
+      webnet:
+        aliases:
+          - backend-green
+
+  # One-shot jobs to sync FE dist from artifact image to shared volume
+  frontend-blue:
+    <<: *frontend-job
+
+  frontend-green:
+    <<: *frontend-job
+
+networks:
+  webnet:
+    name: ${APP_NETWORK_NAME:-web_project_webnet}
+    external: true
+    driver: bridge
+
+volumes:
+  frontend-dist:
+    name: web_project-frontend-dist
+    external: true

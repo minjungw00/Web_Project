@@ -1,0 +1,15 @@
+-- Initialize monitoring user (example)
+-- Copy this into mysql/init on first deployment. The deploy workflow will do this automatically if init is empty.
+
+-- Replace placeholders before running manually, or keep as-is for workflow copy and then edit on server if needed.
+
+-- Create dedicated user for monitoring/metrics collection (e.g., mysqld-exporter)
+CREATE USER IF NOT EXISTS 'monitoring'@'%' IDENTIFIED BY '__REPLACE_ME__';
+
+-- Minimal privileges for scraping status/metrics (adjust to your policy)
+GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'monitoring'@'%';
+
+-- Optionally restrict to performance_schema only (uncomment if preferred)
+-- GRANT SELECT ON performance_schema.* TO 'monitoring'@'%';
+
+FLUSH PRIVILEGES;

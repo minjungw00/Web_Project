@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "backend/**"
-      - "infra/docker/backend/**"
+      - "infra/application/docker/backend/**"
       - ".github/workflows/backend.yml"
   workflow_dispatch:
 
@@ -48,7 +48,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: infra/docker/backend/Dockerfile.prod
+          file: infra/application/docker/backend/Dockerfile.prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

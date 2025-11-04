@@ -1,0 +1,45 @@
+name: web_project-gateway-dev
+
+x-default-dns: &default-dns
+  dns:
+    - ${COMPOSE_DNS1:-1.1.1.1}
+    - ${COMPOSE_DNS2:-8.8.8.8}
+
+services:
+  nginx:
+    <<: *default-dns
+    build:
+      context: ../..
+      dockerfile: infra/gateway/docker/nginx/Dockerfile.dev
+    ports:
+      - "8081:80"
+    env_file:
+      - ./nginx/.env.development
+    volumes:
+      - ./nginx/default.dev.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./nginx/proxy-headers.conf:/etc/nginx/snippets/proxy-headers.conf:ro
+      - ${CERTBOT_DEV_MOUNT:-certbot-dev}:/var/www/certbot
+      - ${FE_DIST_MOUNT:-frontend-dist}:/usr/share/nginx/html:ro
+      - ${NGINX_MONITORING_HTPASSWD_FILE:-./nginx/monitoring.htpasswd.dev}:/etc/nginx/secrets/monitoring.htpasswd:ro
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -sf http://localhost/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - webnet
+    restart: unless-stopped
+
+networks:
+  webnet:
+    name: ${APP_NETWORK_NAME:-web_project_webnet-dev}
+    external: true
+    driver: bridge
+
+volumes:
+  frontend-dist:
+    external: true
+    name: web_project-dev_frontend-dist
+  certbot-dev:

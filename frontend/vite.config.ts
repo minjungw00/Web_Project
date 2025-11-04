@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiBaseUrl,
           changeOrigin: true,
-          // keep the path as-is (no rewrite), since backend serves /api/*
+          // keep the path as-is (no rewrite), since backend serves /api/* natively
         },
       },
     },

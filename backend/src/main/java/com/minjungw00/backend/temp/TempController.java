@@ -1,7 +1,5 @@
 package com.minjungw00.backend.temp;
 
-import java.util.HashMap;
-import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,18 +17,6 @@ public class TempController {
    */
   @GetMapping(path = "/", produces = MediaType.TEXT_PLAIN_VALUE)
   public String home() {
-    return "Backend is running. Try GET /api/health";
-  }
-
-  /**
-   * 헬스체크 응답.
-   *
-   * @return 상태 정보 맵
-   */
-  @GetMapping(path = "/api/health", produces = MediaType.APPLICATION_JSON_VALUE)
-  public Map<String, Object> health() {
-    Map<String, Object> resp = new HashMap<>();
-    resp.put("status", "UP");
-    return resp;
+    return "Backend is running. Try GET /api/actuator/health";
   }
 }

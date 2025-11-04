@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - "infra/nginx/**"
-      - "infra/docker/nginx/**"
+      - "infra/gateway/nginx/**"
+      - "infra/gateway/docker/nginx/**"
       - ".github/workflows/nginx.yml"
   workflow_dispatch:
 
@@ -48,7 +48,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: infra/docker/nginx/Dockerfile.prod
+          file: infra/gateway/docker/nginx/Dockerfile.prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -23,11 +23,17 @@ jobs:
           script: |
             set -euo pipefail
             WORKDIR="$HOME/srv/web_project"
-            mkdir -p "$WORKDIR/backend" "$WORKDIR/nginx"
+            mkdir -p "$WORKDIR/application" "$WORKDIR/application/backend" "$WORKDIR/gateway" "$WORKDIR/gateway/nginx" "$WORKDIR/monitoring" "$WORKDIR/monitoring/mysqld-exporter" "$WORKDIR/infrastructure/mysql" "$WORKDIR/infrastructure/mysql/init"
 
-            ROOT_ENV_B64='${{ secrets.ROOT_ENV_BASE64 }}'
+            ROOT_ENV_B64='${{ secrets.SERVER_ROOT_ENV_BASE64 }}'
+            APP_ENV_B64='${{ secrets.APPLICATION_ENV_PRODUCTION_BASE64 }}'
             BE_ENV_B64='${{ secrets.BACKEND_ENV_PRODUCTION_BASE64 }}'
             NGINX_ENV_B64='${{ secrets.NGINX_ENV_PRODUCTION_BASE64 }}'
+            MON_ENV_B64='${{ secrets.MONITORING_ENV_PRODUCTION_BASE64 }}'
+            MYSQLD_EXPORTER_CNF_B64='${{ secrets.MYSQLD_EXPORTER_MYCNF_PROD_BASE64 }}'
+            NGINX_HTPASSWD_B64='${{ secrets.NGINX_MONITORING_HTPASSWD_PROD_BASE64 }}'
+            GATEWAY_ENV_B64='${{ secrets.GATEWAY_ENV_PRODUCTION_BASE64 }}'
+            INFRA_ENV_B64='${{ secrets.INFRASTRUCTURE_ENV_PRODUCTION_BASE64 }}'
 
             write_if_present() {
               local b64="$1" path="$2" tmp="$2.tmp" label="$3"
@@ -41,8 +47,14 @@ jobs:
               fi
             }
 
-            write_if_present "$ROOT_ENV_B64"  "$WORKDIR/.env"                   ".env (root)"
-            write_if_present "$BE_ENV_B64"    "$WORKDIR/backend/.env.production" "backend/.env.production"
-            write_if_present "$NGINX_ENV_B64" "$WORKDIR/nginx/.env.production"   "nginx/.env.production"
+            write_if_present "$ROOT_ENV_B64"  "$WORKDIR/.env.server.prod"                           ".env.server.prod (root)"
+            write_if_present "$APP_ENV_B64"    "$WORKDIR/application/.env.application.prod"     "application/.env.application.prod"
+            write_if_present "$BE_ENV_B64"    "$WORKDIR/application/backend/.env.production" "application/backend/.env.production"
+            write_if_present "$GATEWAY_ENV_B64" "$WORKDIR/gateway/.env.gateway.prod"  "gateway/.env.gateway.prod"
+            write_if_present "$NGINX_ENV_B64" "$WORKDIR/gateway/nginx/.env.production"   "gateway/nginx/.env.production"
+            write_if_present "$MON_ENV_B64"   "$WORKDIR/monitoring/.env.monitoring.prod" "monitoring/.env.monitoring.prod"
+            write_if_present "$MYSQLD_EXPORTER_CNF_B64" "$WORKDIR/monitoring/mysqld-exporter/.my.cnf.prod" "monitoring/mysqld-exporter/.my.cnf.prod"
+            write_if_present "$NGINX_HTPASSWD_B64" "$WORKDIR/gateway/nginx/monitoring.htpasswd.prod" "gateway/nginx/monitoring.htpasswd.prod"
+            write_if_present "$INFRA_ENV_B64" "$WORKDIR/infrastructure/.env.infrastructure.prod" "infrastructure/.env.infrastructure.prod"
 
             echo "[sync-env] done"

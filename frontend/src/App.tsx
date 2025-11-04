@@ -22,7 +22,7 @@ const App = (): React.ReactElement => {
     setError(null);
     setData(null);
     try {
-      const resp = await fetch('/api/health');
+      const resp = await fetch('/api/actuator/health');
       if (!resp.ok) {
         throw new Error(`HTTP ${resp.status}`);
       }
@@ -73,7 +73,9 @@ const App = (): React.ReactElement => {
           count is {count}
         </button>
         <button onClick={checkServerHealth} type="button">
-          {loading ? '서버 상태 확인 중…' : '서버 상태 확인 (/api/health)'}
+          {loading
+            ? '서버 상태 확인 중…'
+            : '서버 상태 확인 (/api/actuator/health)'}
         </button>
         {Boolean(error) && (
           <p style={{ color: 'crimson' }}>요청 실패: {error}</p>

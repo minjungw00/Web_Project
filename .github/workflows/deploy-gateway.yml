@@ -1,0 +1,113 @@
+name: deploy-gateway
+
+on:
+  workflow_dispatch:
+    inputs:
+      nginx_tag:
+        description: "nginx 이미지 태그 (미지정 시 latest)"
+        required: false
+        default: "latest"
+  workflow_call:
+    inputs:
+      nginx_tag:
+        description: "nginx 이미지 태그"
+        type: string
+        required: false
+        default: "latest"
+
+jobs:
+  deploy-gateway:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload gateway compose file to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          source: infra/gateway/docker-compose.gateway.prod.yml
+          target: ~/srv/web_project/gateway/
+          strip_components: 2
+
+      - name: Upload gateway nginx config to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          source: infra/gateway/nginx/*.conf,infra/gateway/nginx/certbot-issue.sh
+          target: ~/srv/web_project/gateway/
+          strip_components: 2
+
+      - name: Deploy gateway
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          script: |
+            set -euo pipefail
+            ROOTDIR="$HOME/srv/web_project"
+            WORKDIR="$ROOTDIR/gateway"
+            mkdir -p "$WORKDIR"
+            cd "$WORKDIR"
+
+            # Set nginx tag
+            export NGINX_TAG="${{ inputs.nginx_tag }}"
+
+            # Build merged env for compose variable expansion: root ../.env.server + stack .env.gateway.prod (if present)
+            ROOT_ENV="../.env.server"
+            if [ -f "../.env.server.prod" ]; then
+              ROOT_ENV="../.env.server.prod"
+            fi
+            STACK_ENV=".env.gateway.prod"
+            MERGED_ENV=".env.merged"
+            {
+              if [ -f "$ROOT_ENV" ]; then sed -e '/^\s*#/d' -e '/^\s*$/d' "$ROOT_ENV"; fi
+              if [ -f "$STACK_ENV" ]; then sed -e '/^\s*#/d' -e '/^\s*$/d' "$STACK_ENV"; fi
+            } > "$MERGED_ENV"
+            chmod 600 "$MERGED_ENV" 2>/dev/null || true
+
+            export SERVER_ROOT="$ROOTDIR"
+
+            # Pull new image
+            docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml pull
+
+            # Deploy with zero-downtime
+            docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml up -d
+
+            # Wait for health check
+            echo "Waiting for nginx to be healthy..."
+            for i in $(seq 1 30); do
+              CID=$(docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml ps -q nginx || true)
+              if [ -n "$CID" ]; then
+                STATUS=$(docker inspect -f '{{.State.Health.Status}}' "$CID" 2>/dev/null || echo "unknown")
+                if [ "$STATUS" = "healthy" ]; then
+                  echo "Gateway is healthy!"
+                  rm -f "$MERGED_ENV"
+                  exit 0
+                fi
+                if [ "$STATUS" = "unhealthy" ]; then
+                  echo "Gateway reported unhealthy status" >&2
+                  break
+                fi
+              fi
+              echo "Attempt $i/30: waiting..."
+              sleep 2
+            done
+
+            echo "Gateway health check failed!"
+            docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml logs nginx
+            rm -f "$MERGED_ENV"
+            exit 1

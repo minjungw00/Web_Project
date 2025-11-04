@@ -43,7 +43,7 @@ pnpm run docker:dev:up
 pnpm run docker:dev:down
 ```
 
-`setup:dev-env` 스크립트는 `infra/docker/.env.local` 파일에 `LOCAL_UID`와 `LOCAL_GID` 값을 기록하며, `docker:dev:up`/`docker:dev:down`은 해당 값을 자동으로 Compose에 넘깁니다.
+`setup:dev-env` 스크립트는 `infra/application/.env.local` 파일에 `LOCAL_UID`와 `LOCAL_GID` 값을 기록하며, `docker:dev:up`/`docker:dev:down`은 해당 값을 자동으로 Compose에 넘깁니다.
 
 ## Server Spec
 

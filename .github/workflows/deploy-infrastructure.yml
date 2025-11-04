@@ -1,0 +1,91 @@
+name: deploy-infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_images:
+        description: "컨테이너 이미지 pull 수행 여부"
+        required: false
+        default: "true"
+      recreate:
+        description: "강제 재생성(--force-recreate)"
+        required: false
+        default: "false"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload infrastructure stack to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          source: infra/infrastructure/**
+          target: ~/srv/web_project/infrastructure/
+          strip_components: 2
+
+      - name: Deploy infrastructure on server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          script: |
+            set -euo pipefail
+            WORKDIR="$HOME/srv/web_project/infrastructure"
+            ROOTDIR="$HOME/srv/web_project"
+            mkdir -p "$WORKDIR/mysql/init" "$WORKDIR/mysql/init-templates"
+
+            cd "$WORKDIR"
+
+            # Merge root ../.env.server and optional .env.infrastructure.prod
+            MERGED_ENV=".env.merged"
+            ROOT_ENV="$ROOTDIR/.env.server"
+            if [ -f "$ROOTDIR/.env.server.prod" ]; then
+              ROOT_ENV="$ROOTDIR/.env.server.prod"
+            fi
+            {
+              if [ -f "$ROOT_ENV" ]; then sed -e '/^\s*#/d' -e '/^\s*$/d' "$ROOT_ENV"; fi
+              if [ -f ".env.infrastructure.prod" ]; then sed -e '/^\s*#/d' -e '/^\s*$/d' ".env.infrastructure.prod"; fi
+            } > "$MERGED_ENV"
+            chmod 600 "$MERGED_ENV" 2>/dev/null || true
+
+            # Ensure external network exists (use APP_NETWORK_NAME from merged env if provided)
+            APP_NETWORK_NAME=$(grep -E '^[[:space:]]*APP_NETWORK_NAME=' "$MERGED_ENV" | tail -n1 | sed -e 's/^[^=]*=\s*//' -e 's/^"\|\"//g' -e 's/"\|\"$//g' || true)
+            if [ -z "${APP_NETWORK_NAME:-}" ]; then APP_NETWORK_NAME="web_project_webnet"; fi
+            docker network create "$APP_NETWORK_NAME" >/dev/null 2>&1 || true
+
+            # If init directory is empty, copy example templates
+            if [ ! "$(ls -A "$WORKDIR/mysql/init" 2>/dev/null)" ]; then
+              echo "[deploy-infrastructure] init dir empty; copying templates..."
+              if [ -d "$WORKDIR/mysql/init-templates" ]; then
+                cp -n "$WORKDIR"/mysql/init-templates/* "$WORKDIR"/mysql/init/ 2>/dev/null || true
+              fi
+            fi
+
+            COMPOSE_FILE="docker-compose.infrastructure.prod.yml"
+            if [ "${{ inputs.pull_images }}" = "true" ]; then
+              docker compose -f "$COMPOSE_FILE" --env-file "$MERGED_ENV" pull || true
+            fi
+
+            RECREATE_FLAG=""
+            if [ "${{ inputs.recreate }}" = "true" ]; then
+              RECREATE_FLAG="--force-recreate"
+            fi
+
+            docker compose -f "$COMPOSE_FILE" --env-file "$MERGED_ENV" up -d $RECREATE_FLAG
+
+            rm -f "$MERGED_ENV"
+            echo "[deploy-infrastructure] done"

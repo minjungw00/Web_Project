@@ -1,0 +1,132 @@
+name: deploy-application
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "모든 서비스에 공통 적용할 태그 (미지정 시 latest)"
+        required: false
+        default: ""
+      fe_tag:
+        description: "frontend 이미지 태그 (미지정 시 image_tag 또는 latest)"
+        required: false
+        default: ""
+      be_tag:
+        description: "backend 이미지 태그 (미지정 시 image_tag 또는 latest)"
+        required: false
+        default: ""
+      update_gateway:
+        description: "배포 후 Gateway도 갱신할지 여부"
+        required: false
+        type: boolean
+        default: true
+      nginx_tag:
+        description: "nginx 이미지 태그 (update_gateway가 true일 때만 사용)"
+        required: false
+        default: "latest"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload application compose file to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          source: infra/application/docker-compose.application.prod.yml
+          target: ~/srv/web_project/application/
+          strip_components: 2
+
+      - name: Upload deployment script to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          source: infra/deploy-blue-green.sh
+          target: ~/srv/web_project/
+          strip_components: 1
+
+      - name: Prepare blue-green deployment
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          script: |
+            set -euo pipefail
+            WORKDIR="$HOME/srv/web_project"
+            mkdir -p \
+              "$WORKDIR/application" \
+              "$WORKDIR/application/backend" \
+              "$WORKDIR/gateway" \
+              "$WORKDIR/gateway/nginx"
+            export SERVER_ROOT="$WORKDIR"
+            export APP_ENV_FILE="${APP_ENV_FILE:-$WORKDIR/application/.env.application.prod}"
+
+            COMMON_TAG="${{ inputs.image_tag }}"
+
+            set_tag() {
+              local name="$1"
+              local value="$2"
+              if [ -n "$value" ]; then
+                export "$name"="$value"
+              elif [ -n "$COMMON_TAG" ]; then
+                export "$name"="$COMMON_TAG"
+              fi
+            }
+
+            set_tag FE_TAG "${{ inputs.fe_tag }}"
+            set_tag BE_TAG "${{ inputs.be_tag }}"
+
+            cd "$WORKDIR"
+            chmod +x deploy-blue-green.sh
+            ./deploy-blue-green.sh --phase prepare
+
+  deploy-gateway:
+    needs: prepare
+    if: ${{ inputs.update_gateway == true }}
+    uses: ./.github/workflows/deploy-gateway.yml
+    secrets: inherit
+    with:
+      nginx_tag: ${{ inputs.nginx_tag }}
+
+  finalize:
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+      - deploy-gateway
+    if: ${{ needs.prepare.result == 'success' && (needs.deploy-gateway.result == 'success' || needs.deploy-gateway.result == 'skipped') }}
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+    steps:
+      - name: Finalize blue-green deployment
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
+          port: ${{ env.DEPLOY_PORT }}
+          script: |
+            set -euo pipefail
+            WORKDIR="$HOME/srv/web_project"
+            export SERVER_ROOT="$WORKDIR"
+            cd "$WORKDIR"
+            chmod +x deploy-blue-green.sh
+            ./deploy-blue-green.sh --phase finalize

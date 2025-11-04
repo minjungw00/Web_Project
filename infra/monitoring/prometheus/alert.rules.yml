@@ -1,0 +1,87 @@
+groups:
+  - name: infrastructure.rules
+    rules:
+      - alert: NodeExporterDown
+        expr: up{job="node"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "node_exporter down"
+          description: "node_exporter target {{ $labels.instance }} is not reachable"
+
+      - alert: CadvisorDown
+        expr: up{job="cadvisor"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cAdvisor down"
+          description: "cAdvisor target {{ $labels.instance }} is not reachable"
+
+      - alert: HighNodeCpu
+        expr: avg(rate(node_cpu_seconds_total{mode!="idle"}[5m])) by (instance) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "Host {{ $labels.instance }} CPU usage > 90% for 10m"
+
+      - alert: FilesystemFull
+        expr: node_filesystem_free_bytes{fstype!~"tmpfs|ramfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|ramfs"} < 0.15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space running low"
+          description: "Host {{ $labels.instance }} filesystem {{ $labels.mountpoint }} < 15% free"
+
+  - name: application.rules
+    rules:
+      - alert: BackendAllDown
+        expr: sum(up{job="spring-backend"}) == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Spring Boot backends all down"
+          description: "Both blue and green backend targets are unreachable"
+
+      - alert: BackendErrorRate
+        expr: rate(http_server_requests_seconds_count{status=~"5.."}[5m]) / clamp_min(rate(http_server_requests_seconds_count[5m]), 1) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High backend error rate"
+          description: "Spring Boot 5xx error rate > 5% over 10m"
+
+      - alert: SlowHttpResponses
+        expr: histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{uri!~"/actuator.*"}[5m])) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow HTTP responses"
+          description: "95th percentile HTTP latency > 2s"
+
+  - name: mysql.rules
+    rules:
+      - alert: MysqlDown
+        expr: up{job="mysql"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL exporter down"
+          description: "mysqld_exporter target {{ $labels.instance }} is not reachable"
+
+      - alert: MysqlConnectionSaturation
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL connections nearing limit"
+          description: "MySQL connections > 85% of max for 10m"

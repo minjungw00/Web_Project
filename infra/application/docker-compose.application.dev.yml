@@ -1,0 +1,126 @@
+name: web_project-application-dev
+
+x-default-dns: &default-dns
+  dns:
+    - ${COMPOSE_DNS1:-1.1.1.1}
+    - ${COMPOSE_DNS2:-8.8.8.8}
+
+x-backend-dev-common: &backend-dev-common
+  <<: *default-dns
+  build:
+    context: ../..
+    dockerfile: infra/application/docker/backend/Dockerfile.dev
+    args:
+      USER_ID: ${LOCAL_UID:-1000}
+      GROUP_ID: ${LOCAL_GID:-1000}
+  env_file:
+    - ../../backend/.env.development
+  volumes:
+    - ../../backend:/workspace
+  expose:
+    - "8080"
+  healthcheck:
+    test:
+      [
+        "CMD-SHELL",
+        "curl -fsS http://localhost:8080/api/actuator/health || exit 1",
+      ]
+    interval: 10s
+    timeout: 5s
+    retries: 10
+    start_period: 20s
+  restart: unless-stopped
+  networks:
+    - webnet
+
+x-frontend-builder-dev-common: &frontend-builder-dev-common
+  <<: *default-dns
+  build:
+    context: ../..
+    dockerfile: infra/application/docker/frontend/Dockerfile.dev
+    args:
+      USER_ID: ${LOCAL_UID:-1000}
+      GROUP_ID: ${LOCAL_GID:-1000}
+  working_dir: /workspace
+  command: sh -c "pnpm install && pnpm build --watch"
+  env_file:
+    - ../../frontend/.env.development
+  environment:
+    NODE_ENV: development
+  volumes:
+    - ../../frontend:/workspace
+    - frontend-node-modules:/workspace/node_modules
+    - frontend-pnpm-store:/home/app/.pnpm-store
+    - ${FE_DIST_MOUNT:-frontend-dist}:/workspace/dist
+  networks:
+    - webnet
+
+services:
+  # Dev FE server for local development (optional)
+  frontend:
+    <<: *default-dns
+    build:
+      context: ../..
+      dockerfile: infra/application/docker/frontend/Dockerfile.dev
+      args:
+        USER_ID: ${LOCAL_UID:-1000}
+        GROUP_ID: ${LOCAL_GID:-1000}
+    ports:
+      - "5173:5173"
+    env_file:
+      - ../../frontend/.env.development
+    environment:
+      NODE_ENV: development
+      VITE_API_BASE_URL: http://backend-blue:8080
+    volumes:
+      - ../../frontend:/workspace
+      - frontend-node-modules:/workspace/node_modules
+      - frontend-pnpm-store:/home/app/.pnpm-store
+    networks:
+      - webnet
+
+  frontend-blue:
+    <<: *frontend-builder-dev-common
+    profiles: ["blue"]
+
+  # Continuous FE dist builder (green)
+  frontend-green:
+    <<: *frontend-builder-dev-common
+    profiles: ["green"]
+
+  backend-blue:
+    <<: *backend-dev-common
+    profiles: ["blue"]
+    networks:
+      webnet:
+        aliases:
+          - backend-blue
+    volumes:
+      - ../../backend:/workspace
+      - gradle-cache-blue:/workspace/.gradle
+
+  backend-green:
+    <<: *backend-dev-common
+    profiles: ["green"]
+    networks:
+      webnet:
+        aliases:
+          - backend-green
+    volumes:
+      - ../../backend:/workspace
+      - gradle-cache-green:/workspace/.gradle
+
+networks:
+  webnet:
+    name: ${APP_NETWORK_NAME:-web_project_webnet-dev}
+    external: true
+    driver: bridge
+
+volumes:
+  frontend-dist:
+    name: web_project-dev_frontend-dist
+    external: true
+  frontend-node-modules:
+  frontend-pnpm-store:
+  gradle-cache-blue:
+  gradle-cache-green:

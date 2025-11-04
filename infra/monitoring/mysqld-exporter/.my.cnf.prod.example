@@ -1,0 +1,13 @@
+[client]
+# MySQL user created for monitoring (least privilege)
+# Example grants:
+#   CREATE USER 'monitoring'@'%' IDENTIFIED BY '__REPLACE_ME__';
+#   GRANT PROCESS, REPLICATION CLIENT, SELECT ON *.* TO 'monitoring'@'%';
+#   FLUSH PRIVILEGES;
+user=monitoring
+password=__REPLACE_ME__
+host=mysql
+port=3306
+
+# Copy this file to `.my.cnf.prod` on the server and replace placeholders.
+# NOTE: `.my.cnf.prod` is gitignored and must NOT be committed.

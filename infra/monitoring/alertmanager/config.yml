@@ -1,0 +1,46 @@
+global:
+  resolve_timeout: 5m
+  # SMTP settings disabled (see infra/docs/monitoring.md for instructions if email alerts are needed)
+  # smtp_smarthost: "${ALERTMANAGER_SMTP_HOST}"
+  # smtp_from: "${ALERTMANAGER_SMTP_FROM}"
+  # smtp_auth_username: "${ALERTMANAGER_SMTP_USERNAME}"
+  # smtp_auth_password: "${ALERTMANAGER_SMTP_PASSWORD}"
+  # smtp_require_tls: true
+
+route:
+  receiver: default
+  group_by: ["alertname"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: critical
+      repeat_interval: 1h
+    - matchers:
+        - severity="warning"
+      receiver: warning
+
+receivers:
+  - name: default
+  - name: critical
+    slack_configs:
+      - api_url: "${ALERTMANAGER_SLACK_WEBHOOK_URL}"
+        channel: "${ALERTMANAGER_SLACK_CHANNEL}"
+        send_resolved: true
+        icon_emoji: ":rotating_light:"
+        title: "{{ .CommonAnnotations.summary }}"
+        text: "{{ .CommonAnnotations.description }}"
+    # email_configs:
+    #   - to: "${ALERTMANAGER_EMAIL_TO}"
+    #     send_resolved: true
+
+  - name: warning
+    slack_configs:
+      - api_url: "${ALERTMANAGER_SLACK_WEBHOOK_URL}"
+        channel: "${ALERTMANAGER_SLACK_CHANNEL}"
+        send_resolved: true
+        icon_emoji: ":warning:"
+        title: "{{ .CommonAnnotations.summary }}"
+        text: "{{ .CommonAnnotations.description }}"

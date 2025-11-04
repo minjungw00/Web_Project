@@ -35,3 +35,10 @@ dist
 .env*
 **/.env*
 !**/.env*.example
+
+# monitoring: do not track production MySQL exporter credentials
+/infra/monitoring/mysqld-exporter/.my.cnf.prod
+
+# nginx basic auth credential file (generated per environment)
+/infra/gateway/nginx/monitoring.htpasswd*
+!/infra/gateway/nginx/monitoring.htpasswd*.example

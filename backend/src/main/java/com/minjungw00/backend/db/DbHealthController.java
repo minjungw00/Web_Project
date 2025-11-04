@@ -4,7 +4,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
 import javax.sql.DataSource;
+
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -16,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** 가벼운 데이터베이스 연결 상태를 확인하는 엔드포인트를 제공합니다. */
 @RestController
-@RequestMapping(path = "/api/db", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(path = "/db", produces = MediaType.APPLICATION_JSON_VALUE)
 public class DbHealthController {
 
   private final JdbcTemplate jdbcTemplate;

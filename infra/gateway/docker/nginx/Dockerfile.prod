@@ -1,0 +1,17 @@
+# syntax=docker/dockerfile:1.7
+
+# Nginx runtime only: FE 정적 파일은 런타임에 공유 볼륨으로 마운트됨
+FROM nginx:1.29-alpine
+
+RUN apk add --no-cache bash gettext curl
+
+# Copy nginx templates and snippets
+COPY infra/gateway/nginx/default.prod.conf /etc/nginx/templates/default.conf.template
+COPY infra/gateway/nginx/proxy-headers.conf /etc/nginx/snippets/proxy-headers.conf
+COPY infra/gateway/docker/nginx/entrypoint.sh /docker-entrypoint.d/99-envsubst.sh
+
+RUN chmod +x /docker-entrypoint.d/99-envsubst.sh \
+  && mkdir -p /var/www/certbot \
+  && mkdir -p /etc/nginx/secrets
+
+EXPOSE 80 443
