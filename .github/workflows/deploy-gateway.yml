@@ -84,6 +84,8 @@ jobs:
 
             export SERVER_ROOT="$ROOTDIR"
 
+            HTPASSWD_UPDATED=0
+
             sync_monitoring_htpasswd() {
               local b64="${NGINX_MONITORING_HTPASSWD_PROD_BASE64:-}"
               local target="$WORKDIR/nginx/monitoring.htpasswd.prod"
@@ -93,9 +95,12 @@ jobs:
               mkdir -p "$(dirname "$target")"
               local tmp="${target}.tmp"
               printf '%s' "$b64" | base64 -d > "$tmp"
-              install -m 600 "$tmp" "$target"
+              if [ ! -f "$target" ] || ! cmp -s "$tmp" "$target"; then
+                install -m 600 "$tmp" "$target"
+                HTPASSWD_UPDATED=1
+                echo "[deploy-gateway] monitoring.htpasswd synced from secret"
+              fi
               rm -f "$tmp"
-              echo "[deploy-gateway] monitoring.htpasswd synced from secret"
             }
 
             sync_monitoring_htpasswd
@@ -145,8 +150,12 @@ jobs:
             # Pull new image
             docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml pull
 
-            # Deploy with zero-downtime
-            docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml up -d
+            # Deploy with zero-downtime (force recreate if secrets changed)
+            if [ "$HTPASSWD_UPDATED" = "1" ]; then
+              docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml up -d --force-recreate
+            else
+              docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml up -d
+            fi
 
             # Wait for health check
             echo "Waiting for nginx to be healthy..."
