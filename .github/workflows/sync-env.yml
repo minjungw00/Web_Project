@@ -37,11 +37,11 @@ jobs:
             INFRA_ENV_B64='${{ secrets.INFRASTRUCTURE_ENV_PRODUCTION_BASE64 }}'
 
             write_if_present() {
-              local b64="$1" path="$2" tmp="$2.tmp" label="$3"
+              local b64="$1" path="$2" tmp="$2.tmp" label="$3" mode="${4:-600}"
               if [ -n "$b64" ] && [ "$b64" != '***' ]; then
                 echo "[sync-env] updating: $label -> $path"
                 printf '%s' "$b64" | base64 -d > "$tmp"
-                install -m 600 "$tmp" "$path"
+                install -m "$mode" "$tmp" "$path"
                 rm -f "$tmp"
               else
                 echo "[sync-env] skip: $label (no secret provided)"
@@ -54,7 +54,7 @@ jobs:
             write_if_present "$GATEWAY_ENV_B64" "$WORKDIR/gateway/.env.gateway.prod"  "gateway/.env.gateway.prod"
             write_if_present "$NGINX_ENV_B64" "$WORKDIR/gateway/nginx/.env.production"   "gateway/nginx/.env.production"
             write_if_present "$MON_ENV_B64"   "$WORKDIR/monitoring/.env.monitoring.prod" "monitoring/.env.monitoring.prod"
-            write_if_present "$MYSQLD_EXPORTER_CNF_B64" "$WORKDIR/monitoring/mysqld-exporter/.my.cnf.prod" "monitoring/mysqld-exporter/.my.cnf.prod"
+            write_if_present "$MYSQLD_EXPORTER_CNF_B64" "$WORKDIR/monitoring/mysqld-exporter/.my.cnf.prod" "monitoring/mysqld-exporter/.my.cnf.prod" 644
             write_if_present "$NGINX_HTPASSWD_B64" "$WORKDIR/gateway/nginx/monitoring.htpasswd.prod" "gateway/nginx/monitoring.htpasswd.prod"
             write_if_present "$INFRA_ENV_B64" "$WORKDIR/infrastructure/.env.infrastructure.prod" "infrastructure/.env.infrastructure.prod"
 

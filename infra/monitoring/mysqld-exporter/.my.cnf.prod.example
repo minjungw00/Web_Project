@@ -11,3 +11,5 @@ port=3306
 
 # Copy this file to `.my.cnf.prod` on the server and replace placeholders.
 # NOTE: `.my.cnf.prod` is gitignored and must NOT be committed.
+#       The sync-env workflow installs it with mode 0644 so the exporter
+#       container (running as an unprivileged user) can read it.
