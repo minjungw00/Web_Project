@@ -10,6 +10,7 @@ on:
 
 jobs:
   sync:
+    if: ${{ github.actor == github.repository_owner }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.target }}
     steps:

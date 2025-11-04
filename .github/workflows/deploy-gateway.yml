@@ -17,6 +17,7 @@ on:
 
 jobs:
   deploy-gateway:
+    if: ${{ github.actor == github.repository_owner || github.event_name == 'workflow_call' }}
     runs-on: ubuntu-latest
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}

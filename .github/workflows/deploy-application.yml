@@ -27,6 +27,7 @@ on:
 
 jobs:
   prepare:
+    if: ${{ github.actor == github.repository_owner }}
     runs-on: ubuntu-latest
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -98,7 +99,7 @@ jobs:
 
   deploy-gateway:
     needs: prepare
-    if: ${{ inputs.update_gateway == true }}
+    if: ${{ github.actor == github.repository_owner && inputs.update_gateway == true }}
     uses: ./.github/workflows/deploy-gateway.yml
     secrets: inherit
     with:
@@ -109,7 +110,7 @@ jobs:
     needs:
       - prepare
       - deploy-gateway
-    if: ${{ needs.prepare.result == 'success' && (needs.deploy-gateway.result == 'success' || needs.deploy-gateway.result == 'skipped') }}
+    if: ${{ github.actor == github.repository_owner && needs.prepare.result == 'success' && (needs.deploy-gateway.result == 'success' || needs.deploy-gateway.result == 'skipped') }}
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
