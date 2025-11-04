@@ -7,6 +7,10 @@ on:
         description: "nginx 이미지 태그 (미지정 시 latest)"
         required: false
         default: "latest"
+      force_recreate:
+        description: "컨테이너 강제 재생성 여부 (true/false)"
+        required: false
+        default: "false"
   workflow_call:
     inputs:
       nginx_tag:
@@ -14,6 +18,11 @@ on:
         type: string
         required: false
         default: "latest"
+      force_recreate:
+        description: "컨테이너 강제 재생성 여부"
+        type: string
+        required: false
+        default: "false"
 
 jobs:
   deploy-gateway:
@@ -85,6 +94,17 @@ jobs:
             export SERVER_ROOT="$ROOTDIR"
 
             HTPASSWD_UPDATED=0
+            FORCE_RECREATE=0
+
+            FORCE_RECREATE_INPUT="${{ inputs.force_recreate }}"
+            if [ -n "$FORCE_RECREATE_INPUT" ]; then
+              FORCE_RECREATE_NORMALIZED=$(printf '%s' "$FORCE_RECREATE_INPUT" | tr '[:upper:]' '[:lower:]')
+              case "$FORCE_RECREATE_NORMALIZED" in
+                true|1|yes|on)
+                  FORCE_RECREATE=1
+                  ;;
+              esac
+            fi
 
             sync_monitoring_htpasswd() {
               local b64="${NGINX_MONITORING_HTPASSWD_PROD_BASE64:-}"
@@ -151,7 +171,10 @@ jobs:
             docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml pull
 
             # Deploy with zero-downtime (force recreate if secrets changed)
-            if [ "$HTPASSWD_UPDATED" = "1" ]; then
+            if [ "$HTPASSWD_UPDATED" = "1" ] || [ "$FORCE_RECREATE" = "1" ]; then
+              if [ "$FORCE_RECREATE" = "1" ]; then
+                echo "[deploy-gateway] Force recreate flag enabled"
+              fi
               docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml up -d --force-recreate
             else
               docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml up -d
