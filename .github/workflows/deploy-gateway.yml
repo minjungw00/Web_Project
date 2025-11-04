@@ -24,6 +24,7 @@ jobs:
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
       DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      NGINX_MONITORING_HTPASSWD_PROD_BASE64: ${{ secrets.NGINX_MONITORING_HTPASSWD_PROD_BASE64 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -57,6 +58,7 @@ jobs:
           username: ${{ env.DEPLOY_USER }}
           key: ${{ env.DEPLOY_SSH_KEY }}
           port: ${{ env.DEPLOY_PORT }}
+          envs: NGINX_MONITORING_HTPASSWD_PROD_BASE64
           script: |
             set -euo pipefail
             ROOTDIR="$HOME/srv/web_project"
@@ -81,6 +83,22 @@ jobs:
             chmod 600 "$MERGED_ENV" 2>/dev/null || true
 
             export SERVER_ROOT="$ROOTDIR"
+
+            sync_monitoring_htpasswd() {
+              local b64="${NGINX_MONITORING_HTPASSWD_PROD_BASE64:-}"
+              local target="$WORKDIR/nginx/monitoring.htpasswd.prod"
+              if [ -z "$b64" ] || [ "$b64" = "***" ]; then
+                return 0
+              fi
+              mkdir -p "$(dirname "$target")"
+              local tmp="${target}.tmp"
+              printf '%s' "$b64" | base64 -d > "$tmp"
+              install -m 600 "$tmp" "$target"
+              rm -f "$tmp"
+              echo "[deploy-gateway] monitoring.htpasswd synced from secret"
+            }
+
+            sync_monitoring_htpasswd
 
             detect_active_backend() {
               for candidate in green blue; do
