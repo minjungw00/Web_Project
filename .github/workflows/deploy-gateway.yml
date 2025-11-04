@@ -82,6 +82,48 @@ jobs:
 
             export SERVER_ROOT="$ROOTDIR"
 
+            detect_active_backend() {
+              for candidate in green blue; do
+                local cid status
+                cid=$(docker ps --filter "name=web_project-application-backend-${candidate}" --filter "status=running" -q | head -n1 || true)
+                if [ -n "$cid" ]; then
+                  status=$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null || echo "")
+                  case "$status" in
+                    healthy|)
+                      echo "$candidate"
+                      return 0
+                      ;;
+                  esac
+                fi
+              done
+              return 1
+            }
+
+            update_nginx_backend_host() {
+              local color="$1" env_file="$WORKDIR/nginx/.env.production"
+              [ -n "$color" ] || return 0
+              if [ ! -f "$env_file" ]; then
+                echo "[deploy-gateway] warning: nginx env file not found: $env_file" >&2
+                return 0
+              fi
+              local tmp="$env_file.tmp"
+              if grep -q '^NGINX_BACKEND_HOST=' "$env_file" 2>/dev/null; then
+                sed -E "s/^NGINX_BACKEND_HOST=.*/NGINX_BACKEND_HOST=backend-${color}/" "$env_file" > "$tmp"
+              else
+                cat "$env_file" > "$tmp"
+                printf '\nNGINX_BACKEND_HOST=backend-%s\n' "$color" >> "$tmp"
+              fi
+              install -m 600 "$tmp" "$env_file"
+              rm -f "$tmp"
+              echo "[deploy-gateway] NGINX_BACKEND_HOST updated to backend-${color}"
+            }
+
+            ACTIVE_BACKEND_COLOR=$(detect_active_backend || true)
+            if [ -z "$ACTIVE_BACKEND_COLOR" ]; then
+              echo "[deploy-gateway] warning: active backend color could not be determined; keeping existing NGINX_BACKEND_HOST" >&2
+            fi
+            update_nginx_backend_host "$ACTIVE_BACKEND_COLOR"
+
             # Pull new image
             docker compose --env-file "$MERGED_ENV" -f docker-compose.gateway.prod.yml pull
 
