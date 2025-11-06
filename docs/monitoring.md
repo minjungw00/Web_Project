@@ -178,6 +178,7 @@ scrape_configs:
 | `MYSQL_EXPORTER_ADDRESS`         | `mysql:3306`                                                 | 예            | mysqld-exporter   | 호스트/포트만 환경 변수로 관리, 자격 증명은 .my.cnf.\* 사용     |
 | `NGINX_EXPORTER_SCRAPE_URI`      | `http://nginx/nginx_status`                                  | 예            | nginx-exporter    | `stub_status` 위치와 일치                                       |
 | `PROMTAIL_POSITIONS_MOUNT`       | `promtail-positions`                                         | 아니오        | Promtail          | 호스트 또는 named volume 경로                                   |
+| `NGINX_LOGS_MOUNT`               | `nginx-logs`                                                 | 아니오        | Telegraf/Promtail | 경로 지정 시 바인드, 기본은 Gateway와 공유하는 named volume     |
 
 민감한 값은 Git에 커밋하지 말고 서버 `.env.monitoring.prod`에서만 관리하세요.
 
@@ -223,16 +224,16 @@ location ^~ /monitoring/grafana/ {
 
 ## 6. Metrics & Logs 체크리스트
 
-| 대상              | Metrics Exporter/엔드포인트 | 주요 지표 예시                                                     | 로그 수집 경로                             | 비고                                             |
-| ----------------- | --------------------------- | ------------------------------------------------------------------ | ------------------------------------------ | ------------------------------------------------ |
-| OS/Hardware       | node_exporter               | CPU 사용률, Load Average, Memory/Swap, Disk I/O, 파일시스템 사용률 | Promtail → Loki(`/var/log/syslog` 등)      | 호스트 UID/GID 전달 필요                         |
-| Docker/컨테이너   | cAdvisor                    | 컨테이너별 CPU/Memory, Block I/O, Network                          | Docker JSON 로그 → Promtail                | `compose_service` 라벨로 Blue/Green 구분 가능    |
-| Nginx             | nginx_exporter              | 요청 수, 상태 코드 비율, upstream 지연                             | `/var/log/nginx/access.log`, `error.log`   | ACME 경로 제외 규칙 유지                         |
-| Spring Boot       | `/api/actuator/prometheus`  | 요청 지연, 예외율, Thread pool, DB 커넥션 풀                       | `backend/logs/*.log` → Promtail            | `deployment_color`, `profile` 라벨 추가 권장     |
-| MySQL             | mysqld_exporter             | QPS, 커넥션 수, Buffer Pool hit ratio, Replication lag             | `/var/log/mysql/mysql.log`, slow query log | slow log는 별도 볼륨 마운트                      |
-| 외부 가용성       | blackbox_exporter           | HTTP Availability, TLS 만료, DNS/연결 지연                         | 대상 없음                                  | `/healthz`, `/api/actuator/health` 모니터링 포함 |
-| 애플리케이션 로그 | Loki                        | (지표 없음) Loki Explore에서 서비스별 필터링                       | Promtail 파이프라인(JSON 파싱)             | 보존 기간 기본 30일, 필요 시 Object Storage 검토 |
-| 경보 이벤트       | Alertmanager                | Alert firing/resolve 상태                                          | Alertmanager 로그                          | Slack/Email 기록과 함께 보관                     |
+| 대상              | Metrics Exporter/엔드포인트 | 주요 지표 예시                                                     | 로그 수집 경로                             | 비고                                                          |
+| ----------------- | --------------------------- | ------------------------------------------------------------------ | ------------------------------------------ | ------------------------------------------------------------- |
+| OS/Hardware       | node_exporter               | CPU 사용률, Load Average, Memory/Swap, Disk I/O, 파일시스템 사용률 | Promtail → Loki(`/var/log/syslog` 등)      | 호스트 UID/GID 전달 필요                                      |
+| Docker/컨테이너   | cAdvisor                    | 컨테이너별 CPU/Memory, Block I/O, Network                          | Docker JSON 로그 → Promtail                | `compose_service` 라벨로 Blue/Green 구분 가능                 |
+| Nginx             | nginx_exporter              | 요청 수, 상태 코드 비율, upstream 지연                             | `/var/log/nginx/access.log`, `error.log`   | ACME 경로 제외 규칙 유지, `NGINX_LOGS_MOUNT`로 Gateway와 공유 |
+| Spring Boot       | `/api/actuator/prometheus`  | 요청 지연, 예외율, Thread pool, DB 커넥션 풀                       | `backend/logs/*.log` → Promtail            | `deployment_color`, `profile` 라벨 추가 권장                  |
+| MySQL             | mysqld_exporter             | QPS, 커넥션 수, Buffer Pool hit ratio, Replication lag             | `/var/log/mysql/mysql.log`, slow query log | slow log는 별도 볼륨 마운트                                   |
+| 외부 가용성       | blackbox_exporter           | HTTP Availability, TLS 만료, DNS/연결 지연                         | 대상 없음                                  | `/healthz`, `/api/actuator/health` 모니터링 포함              |
+| 애플리케이션 로그 | Loki                        | (지표 없음) Loki Explore에서 서비스별 필터링                       | Promtail 파이프라인(JSON 파싱)             | 보존 기간 기본 30일, 필요 시 Object Storage 검토              |
+| 경보 이벤트       | Alertmanager                | Alert firing/resolve 상태                                          | Alertmanager 로그                          | Slack/Email 기록과 함께 보관                                  |
 
 ---
 

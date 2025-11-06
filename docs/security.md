@@ -396,24 +396,25 @@ port=3306
 
 #### 9.3.2. Monitoring Compose 환경 변수 (`infra/monitoring/.env.monitoring.*`)
 
-| 변수                             | 설명                    | 개발 기본값                                 | 프로덕션                  |
-| -------------------------------- | ----------------------- | ------------------------------------------- | ------------------------- |
-| `COMPOSE_PROJECT_NAME`           | Compose 프로젝트 이름   | `web_project-dev-monitoring`                | `web_project-monitoring`  |
-| `APP_NETWORK_NAME`               | 외부 네트워크 이름      | `web_project-dev-webnet`                    | `web_project_webnet`      |
-| `COMPOSE_DNS1`                   | DNS 서버 1              | `1.1.1.1`                                   | `1.1.1.1`                 |
-| `COMPOSE_DNS2`                   | DNS 서버 2              | `8.8.8.8`                                   | `8.8.8.8`                 |
-| `GRAFANA_ADMIN_USER`             | Grafana 관리자 계정     | `admin`                                     | `monitoring-admin`        |
-| `GRAFANA_ADMIN_PASSWORD`         | Grafana 관리자 비밀번호 | `admin`                                     | `__REPLACE_ME__` 🔒       |
-| `GRAFANA_ROOT_URL`               | Grafana 외부 URL        | `http://localhost:8081/monitoring/grafana/` | `https://.../grafana/`    |
-| `MYSQL_EXPORTER_ADDRESS`         | MySQL 접속 주소         | `mysql:3306`                                | `mysql:3306`              |
-| `NGINX_EXPORTER_SCRAPE_URI`      | Nginx 메트릭 수집 경로  | `http://nginx/nginx_status`                 | 동일                      |
-| `ALERTMANAGER_SLACK_WEBHOOK_URL` | Slack 웹훅 URL          | (빈 값 가능)                                | `__REPLACE_ME__` 🔒       |
-| `ALERTMANAGER_SLACK_CHANNEL`     | Slack 채널              | `#web-project-alerts-dev`                   | `#web-project-alerts`     |
-| `ALERTMANAGER_EMAIL_TO`          | 알림 받을 이메일        | `dev@example.com`                           | `ops@example.com`         |
-| `ALERTMANAGER_SMTP_HOST`         | SMTP 서버               | `localhost:1025`                            | `smtp.example.com:587`    |
-| `ALERTMANAGER_SMTP_FROM`         | 발신 이메일             | `monitor-dev@example.com`                   | `monitor@web-project.dev` |
-| `ALERTMANAGER_SMTP_USERNAME`     | SMTP 사용자             | -                                           | `monitoring-notify`       |
-| `ALERTMANAGER_SMTP_PASSWORD`     | SMTP 비밀번호           | -                                           | `__REPLACE_ME__` 🔒       |
+| 변수                             | 설명                      | 개발 기본값                                 | 프로덕션                  |
+| -------------------------------- | ------------------------- | ------------------------------------------- | ------------------------- |
+| `COMPOSE_PROJECT_NAME`           | Compose 프로젝트 이름     | `web_project-dev-monitoring`                | `web_project-monitoring`  |
+| `APP_NETWORK_NAME`               | 외부 네트워크 이름        | `web_project-dev-webnet`                    | `web_project_webnet`      |
+| `COMPOSE_DNS1`                   | DNS 서버 1                | `1.1.1.1`                                   | `1.1.1.1`                 |
+| `COMPOSE_DNS2`                   | DNS 서버 2                | `8.8.8.8`                                   | `8.8.8.8`                 |
+| `GRAFANA_ADMIN_USER`             | Grafana 관리자 계정       | `admin`                                     | `monitoring-admin`        |
+| `GRAFANA_ADMIN_PASSWORD`         | Grafana 관리자 비밀번호   | `admin`                                     | `__REPLACE_ME__` 🔒       |
+| `GRAFANA_ROOT_URL`               | Grafana 외부 URL          | `http://localhost:8081/monitoring/grafana/` | `https://.../grafana/`    |
+| `MYSQL_EXPORTER_ADDRESS`         | MySQL 접속 주소           | `mysql:3306`                                | `mysql:3306`              |
+| `NGINX_EXPORTER_SCRAPE_URI`      | Nginx 메트릭 수집 경로    | `http://nginx/nginx_status`                 | 동일                      |
+| `NGINX_LOGS_MOUNT`               | Nginx 로그 공유 볼륨/경로 | `web_project-dev_nginx-logs`                | `web_project_nginx-logs`  |
+| `ALERTMANAGER_SLACK_WEBHOOK_URL` | Slack 웹훅 URL            | (빈 값 가능)                                | `__REPLACE_ME__` 🔒       |
+| `ALERTMANAGER_SLACK_CHANNEL`     | Slack 채널                | `#web-project-alerts-dev`                   | `#web-project-alerts`     |
+| `ALERTMANAGER_EMAIL_TO`          | 알림 받을 이메일          | `dev@example.com`                           | `ops@example.com`         |
+| `ALERTMANAGER_SMTP_HOST`         | SMTP 서버                 | `localhost:1025`                            | `smtp.example.com:587`    |
+| `ALERTMANAGER_SMTP_FROM`         | 발신 이메일               | `monitor-dev@example.com`                   | `monitor@web-project.dev` |
+| `ALERTMANAGER_SMTP_USERNAME`     | SMTP 사용자               | -                                           | `monitoring-notify`       |
+| `ALERTMANAGER_SMTP_PASSWORD`     | SMTP 비밀번호             | -                                           | `__REPLACE_ME__` 🔒       |
 
 ### 9.4. Gateway 환경 변수
 
@@ -451,6 +452,7 @@ port=3306
 | `APP_NETWORK_NAME` | 외부 네트워크 이름                | `web_project_webnet`         |
 | `FE_DIST_MOUNT`    | FE dist 공유 볼륨/경로            | `frontend-dist`              |
 | `FE_DIST_PATH`     | FE 이미지 내부 dist 경로          | `/opt/dist`                  |
+| `NGINX_LOGS_MOUNT` | Nginx 로그 공유 볼륨/경로         | `nginx-logs`                 |
 | `MYSQL_DATA_MOUNT` | (선택) DB 데이터 볼륨/바인드 경로 | 빈 값(스택 파일 기본값 사용) |
 
 ### 9.5.2. Infrastructure Layer (`infra/infrastructure/.env.infrastructure.*`)
@@ -510,6 +512,7 @@ port=3306
 | `MYSQL_HOST`                     | MySQL 호스트                 | `mysql`                                     | `mysql`                   |
 | `MYSQL_PORT`                     | MySQL 포트                   | `3306`                                      | `3306`                    |
 | `NGINX_EXPORTER_SCRAPE_URI`      | Nginx 메트릭 수집 경로       | `http://nginx/nginx_status`                 | 동일                      |
+| `NGINX_LOGS_MOUNT`               | Nginx 로그 공유 볼륨/경로    | `web_project-dev_nginx-logs`                | `web_project_nginx-logs`  |
 | `ALERTMANAGER_SLACK_WEBHOOK_URL` | Slack 웹훅 URL               | (개발용)                                    | `__REPLACE_ME__` 🔒       |
 | `ALERTMANAGER_SLACK_CHANNEL`     | Slack 채널                   | `#web-project-alerts-dev`                   | `#web-project-alerts`     |
 | `ALERTMANAGER_EMAIL_TO`          | 알림 받을 이메일             | `dev@example.com`                           | `ops@example.com`         |
@@ -526,6 +529,7 @@ port=3306
 | `EXTERNAL_NETWORK`     | Infrastructure 네트워크 참조     | `web_project-dev-webnet`        | `web_project_webnet`                   |
 | `FE_DIST_MOUNT`        | Frontend 빌드 볼륨 (Application) | `web_project-dev-frontend-dist` | `frontend-dist`                        |
 | `CERTBOT_MOUNT`        | SSL 인증서 볼륨 (Application)    | `web_project-dev-certbot-dev`   | `${HOME}/srv/web_project/certbot`      |
+| `NGINX_LOGS_MOUNT`     | Nginx 로그 공유 볼륨/경로        | `web_project-dev_nginx-logs`    | `web_project_nginx-logs`               |
 | `NGINX_IMAGE`          | Nginx 이미지                     | `nginx`                         | `ghcr.io/minjungw00/web-project-nginx` |
 | `NGINX_TAG`            | Nginx 이미지 태그                | `latest`                        | `latest`                               |
 | `NGINX_HTTP_PORT`      | HTTP 포트                        | `80`                            | `80`                                   |

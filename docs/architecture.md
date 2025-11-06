@@ -52,7 +52,7 @@ React 기반 Frontend, Spring Boot Backend, MySQL 데이터베이스, Nginx 게�
 ### 2.2 Blue-Green 배포와 아티팩트 흐름
 
 - `infra/deploy-blue-green.sh`는 `prepare`, `gateway`, `finalize` 세 단계로 나뉩니다.
-  - `prepare`: 새 색상(blue 또는 green)과 관련 Compose 서비스를 pull/up하고, FE dist를 전용 볼륨(`frontend-dist`)에 동기화합니다.
+  - `prepare`: 새 색상(blue 또는 green)과 관련 Compose 서비스를 pull/up하고, FE dist를 전용 볼륨(`frontend-dist`)에 동기화하며 Gateway·Monitoring에서 공유하는 Nginx 로그 볼륨(`nginx-logs`)이 없으면 생성합니다.
   - `gateway`: Nginx 구성 파일을 새 색상으로 전환하며 헬스체크가 통과되지 않으면 즉시 이전 색상으로 롤백합니다.
   - `finalize`: 이전 색상을 정리하고, 상태 파일(`deploy-state.json`)을 최신 값으로 갱신합니다.
 - 상태 파일은 `${HOME}/srv/web_project/deploy-state.json`에 저장되어 있어 수동 개입 없이 마지막 색상을 추적할 수 있습니다.
@@ -68,12 +68,12 @@ React 기반 Frontend, Spring Boot Backend, MySQL 데이터베이스, Nginx 게�
   - Gateway(Nginx): `ghcr.io/minjungw00/web-project-nginx`
 - 태그 전략: `latest` + `sha-<GITHUB_SHA>` 동시 태깅, 필요 시 추가 스테이지 태그(`release-YYYYMMDD`) 허용
 - 서비스 이름(Prod Blue/Green): `frontend-blue|green`, `backend-blue|green`, `nginx`, `mysql`
-- 볼륨: `frontend-dist`, `mysql-data`, `certbot` 등 (운영 환경에서는 certbot/mysql-data는 호스트 바인드 권장)
+- 볼륨: `frontend-dist`, `mysql-data`, `certbot`, `nginx-logs` 등 (운영 환경에서는 certbot/mysql-data/nginx-logs는 호스트 바인드 검토)
 - 네트워크: `web_project_webnet`(운영 기본), `web_project-dev-webnet`(개발)
 - 표준 경로
   - 컨테이너: FE dist `/opt/dist`, Nginx 정적 `/usr/share/nginx/html`, Certbot `/var/www/certbot`, LetsEncrypt `/etc/letsencrypt`
   - 호스트: `${HOME}/srv/web_project/application|gateway|infrastructure|monitoring`
-- 바인드 제어 변수: `MYSQL_DATA_MOUNT`, `CERTBOT_MOUNT`, `LETSENCRYPT_MOUNT`, `LETSENCRYPT_LOG_MOUNT`, `FE_DIST_MOUNT`
+- 바인드 제어 변수: `MYSQL_DATA_MOUNT`, `CERTBOT_MOUNT`, `LETSENCRYPT_MOUNT`, `LETSENCRYPT_LOG_MOUNT`, `FE_DIST_MOUNT`, `NGINX_LOGS_MOUNT`
 
 ---
 
@@ -210,6 +210,7 @@ ${HOME}/srv/web_project
 #### Monitoring
 
 - Monitoring 스택은 Blue-Green 대상이 아니므로 필요할 때 수동으로 `docker compose -f monitoring/docker-compose.monitoring.prod.yml up -d`를 실행합니다.
+- Telegraf/Promtail은 게이트웨이에서 공유하는 `nginx-logs` 볼륨을 통해 접근 로그를 수집하므로, 환경 변수 `NGINX_LOGS_MOUNT`가 경로인지(named volume인지) 서버 정책에 맞게 설정돼 있어야 합니다.
 - Prometheus 타깃은 서비스 이름 기준으로 정의되어 있어 색상 전환과 무관하게 지표 수집이 유지됩니다.
 
 #### Gateway

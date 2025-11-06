@@ -35,7 +35,7 @@ CD는 GitHub Actions를 통해 서버(기본 경로 `${HOME}/srv/web_project`)�
 
 1. **환경 파일 동기화**: `sync-env` 워크플로우가 루트 `.env.server.prod`와 레이어별 `.env.*.prod` 파일을 갱신하고 권한을 600으로 설정합니다.
 2. **태그 선택**: CI에서 푸시한 `latest` 또는 `sha-<GITHUB_SHA>` 태그가 환경 변수(`FE_TAG`, `BE_TAG`, `NGINX_TAG`, `DB_TAG`)를 통해 주입됩니다. Application 레이어는 공통 입력(`image_tag`) 또는 개별 입력(`fe_tag`, `be_tag`)으로 최신 태그를 지정합니다.
-3. **Blue/Green 준비 단계**: `deploy-application.yml`이 `infra/deploy-blue-green.sh --phase prepare`를 실행해 대상 색상을 결정하고 Backend/Frontend 이미지를 풀, 신규 Backend 기동, Frontend dist 동기화를 수행합니다. 이때 Gateway `.env.production`의 `NGINX_BACKEND_HOST`가 새 색상으로 업데이트됩니다.
+3. **Blue/Green 준비 단계**: `deploy-application.yml`이 `infra/deploy-blue-green.sh --phase prepare`를 실행해 대상 색상을 결정하고 Backend/Frontend 이미지를 풀, 신규 Backend 기동, Frontend dist 동기화(`frontend-dist` 볼륨)를 수행하며 Gateway·Monitoring가 공유하는 Nginx 로그 볼륨(`nginx-logs`)이 존재하지 않으면 생성합니다. 이때 Gateway `.env.production`의 `NGINX_BACKEND_HOST`가 새 색상으로 업데이트됩니다.
 4. **Gateway 전환**: `update_gateway`가 true인 경우 동일 워크플로우 안에서 `deploy-gateway.yml`을 호출해 nginx 컨테이너를 재배포하고 헬스 체크(최대 60초)를 통과해야 합니다.
 5. **정리 단계**: Gateway가 새 색상을 바라보는 것이 확인되면 `infra/deploy-blue-green.sh --phase finalize`가 이전 색상의 Backend/Frontend를 제거하고 dangling 이미지를 정리합니다. Gateway 전환이 실패하면 finalize 단계도 실패하여 기존 색상을 유지합니다.
 6. **기타 레이어**: Infrastructure(MySQL)와 Monitoring 스택은 독립 워크플로우로 필요시에만 갱신합니다.

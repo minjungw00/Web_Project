@@ -81,6 +81,69 @@ jobs:
             } > "$MERGED_ENV"
             chmod 600 "$MERGED_ENV" 2>/dev/null || true
 
+            normalize_value() {
+              local str="$1"
+              str="${str#"${str%%[![:space:]]*}"}"
+              str="${str%"${str##*[![:space:]]}"}"
+              str="${str%\"}"
+              str="${str#\"}"
+              str="${str%\'}"
+              str="${str#\'}"
+              printf '%s' "$str"
+            }
+
+            get_env_from_file() {
+              local key="$1" default_value="$2" file_path="$3" line value
+              line=$(grep -E "^[[:space:]]*${key}=" "$file_path" | tail -n1 || true)
+              if [ -n "$line" ]; then
+                value="${line#*=}"
+                value="$(normalize_value "$value")"
+              else
+                value=""
+              fi
+              if [ -z "$value" ]; then
+                value="$default_value"
+              fi
+              printf '%s' "$value"
+            }
+
+            is_path_like() {
+              local candidate="$1"
+              if [ -z "$candidate" ]; then
+                return 1
+              fi
+              case "$candidate" in
+                /*|./*|../*|~*|?:/*|*/*|*\\*) return 0 ;;
+              esac
+              return 1
+            }
+
+            resolve_nginx_logs_volume() {
+              local raw
+              raw="$(get_env_from_file "NGINX_LOGS_MOUNT" "nginx-logs" "$MERGED_ENV")"
+              if is_path_like "$raw"; then
+                printf '%s' ""
+              elif [ "$raw" = "nginx-logs" ]; then
+                printf '%s' "web_project_nginx-logs"
+              else
+                printf '%s' "$raw"
+              fi
+            }
+
+            ensure_volume_if_needed() {
+              local volume_name="$1"
+              if [ -z "$volume_name" ]; then
+                return 0
+              fi
+              if ! docker volume inspect "$volume_name" >/dev/null 2>&1; then
+                echo "[deploy-monitoring] Creating volume: $volume_name"
+                docker volume create "$volume_name" >/dev/null
+              fi
+            }
+
+            NGINX_LOGS_VOLUME="$(resolve_nginx_logs_volume)"
+            ensure_volume_if_needed "$NGINX_LOGS_VOLUME"
+
             COMPOSE_FILE="docker-compose.monitoring.prod.yml"
             if [ "${{ inputs.pull_images }}" = "true" ]; then
               docker compose -f "$COMPOSE_FILE" --env-file "$MERGED_ENV" pull || true

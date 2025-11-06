@@ -40,8 +40,10 @@
 
    - 새 색상의 Backend 컨테이너를 기동하고 헬스체크를 통과할 때까지 대기
    - Frontend dist를 `frontend-dist` 볼륨에 동기화
-   - `gateway/nginx/.env.production`의 `NGINX_BACKEND_HOST`를 새 색상으로 갱신
-   - 이미지 풀을 생략하려면 `--skip-pull`, 특정 색상을 강제로 배포하려면 `--override-color blue|green`
+
+- Gateway·Monitoring이 공유하는 Nginx 로그 볼륨(`nginx-logs`)이 없으면 생성 (`NGINX_LOGS_MOUNT` 값이 경로라면 바인드 상태 확인)
+- `gateway/nginx/.env.production`의 `NGINX_BACKEND_HOST`를 새 색상으로 갱신
+- 이미지 풀을 생략하려면 `--skip-pull`, 특정 색상을 강제로 배포하려면 `--override-color blue|green`
 
 3. **Gateway 적용**
    - 기본: GitHub Actions `deploy-gateway` 워크플로 실행 (입력 `pull_images=false` 가능)

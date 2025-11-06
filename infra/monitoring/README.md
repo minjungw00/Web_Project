@@ -117,6 +117,7 @@ docker compose -f monitoring/docker-compose.monitoring.prod.yml logs --tail=50
 - `loki-data`: Loki 데이터
 - `promtail-positions`: Promtail 오프셋 파일
 - `alertmanager-data`: Alertmanager 상태
+- `nginx-logs`: Gateway에서 공유하는 Nginx 액세스/에러 로그 (Telegraf/Promtail용)
 
 프로덕션에서는 필요 시 스냅샷/백업 정책을 별도 수립하세요.
 
@@ -137,6 +138,7 @@ cp infra/monitoring/.env.monitoring.example infra/monitoring/.env.monitoring.pro
 - Alertmanager: `ALERTMANAGER_SLACK_WEBHOOK_URL`, `ALERTMANAGER_SLACK_CHANNEL`, `ALERTMANAGER_SMTP_*`
 - MySQL Exporter: `MYSQL_EXPORTER_ADDRESS`(기본 `mysql:3306`), 자격증명 파일은 `mysqld-exporter/.my.cnf.*`
 - Nginx Exporter: `NGINX_EXPORTER_SCRAPE_URI`(기본 `http://nginx/nginx_status`)
+- Nginx 로그 공유: `NGINX_LOGS_MOUNT` (경로 또는 볼륨 이름, 기본 `nginx-logs`)
 
 민감 정보는 Git에 커밋하지 말고 서버 로컬 `.env` 파일로 주입하세요.
 

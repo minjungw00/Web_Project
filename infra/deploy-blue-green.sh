@@ -186,12 +186,69 @@ compose_gateway() {
   fi
 }
 
-# util: get value from merged env
+# util: get value from merged env (strips simple quotes)
 get_env() {
   local key="$1"; local default="${2:-}"
   local val
-  val="$(grep -E "^${key}=" "$MERGED_APP_ENV" | tail -n1 | cut -d= -f2- || true)"
-  if [[ -n "$val" ]]; then echo "$val"; else echo "$default"; fi
+  val="$(grep -E "^[[:space:]]*${key}=" "$MERGED_APP_ENV" | tail -n1 | cut -d= -f2- | tr -d '\r' || true)"
+  if [[ -n "$val" ]]; then
+    # strip whitespace and surrounding quotes if present
+    val="${val#"${val%%[![:space:]]*}"}"
+    val="${val%"${val##*[![:space:]]}"}"
+    val="${val%\"}"
+    val="${val#\"}"
+    val="${val%\'}"
+    val="${val#\'}"
+    echo "$val"
+  else
+    echo "$default"
+  fi
+}
+
+is_path_like() {
+  local value="$1"
+  if [[ -z "$value" ]]; then
+    return 1
+  fi
+  case "$value" in
+    /*|./*|../*|~*|?:/*|*/*|*\\*) return 0 ;;
+  esac
+  return 1
+}
+
+resolve_mount_volume_name() {
+  local key="$1" default_token="$2" default_dev="$3" default_prod="$4"
+  local candidate
+  candidate="$(get_env "$key" "$default_token")"
+  if is_path_like "$candidate"; then
+    echo ""
+    return 0
+  fi
+  if [[ -z "$candidate" ]]; then
+    candidate="$default_token"
+  fi
+  if [[ "$candidate" == "$default_token" ]]; then
+    if [[ "$ENV_MODE" == "dev" ]]; then
+      echo "$default_dev"
+    else
+      echo "$default_prod"
+    fi
+  else
+    echo "$candidate"
+  fi
+}
+
+ensure_shared_volume() {
+  local key="$1" default_token="$2" default_dev="$3" default_prod="$4"
+  local volume_name
+  volume_name="$(resolve_mount_volume_name "$key" "$default_token" "$default_dev" "$default_prod")"
+  if [[ -z "$volume_name" ]]; then
+    return 0
+  fi
+  if ! docker volume inspect "$volume_name" >/dev/null 2>&1; then
+    log "공유 볼륨 생성: $volume_name"
+    docker volume create "$volume_name" >/dev/null
+  fi
 }
 
 # ensure external network exists (especially in dev)
@@ -205,20 +262,6 @@ ensure_network() {
   if ! docker network inspect "$net_name" >/dev/null 2>&1; then
     log "외부 네트워크가 없어 생성합니다: $net_name"
     docker network create "$net_name" >/dev/null
-  fi
-}
-
-# ensure FE dist external volume (mainly for dev, harmless if exists)
-ensure_fe_dist_volume() {
-  local vol_name
-  if [[ "$ENV_MODE" == "dev" ]]; then
-    vol_name="web_project-dev_frontend-dist"
-  else
-    vol_name="web_project-frontend-dist"
-  fi
-  if ! docker volume inspect "$vol_name" >/dev/null 2>&1; then
-    log "프론트엔드 dist 볼륨 생성: $vol_name"
-    docker volume create "$vol_name" >/dev/null
   fi
 }
 
@@ -403,7 +446,8 @@ PREVIOUS_COLOR=""
 
 phase_prepare() {
   ensure_network
-  ensure_fe_dist_volume
+  ensure_shared_volume "FE_DIST_MOUNT" "frontend-dist" "web_project-dev_frontend-dist" "web_project-frontend-dist"
+  ensure_shared_volume "NGINX_LOGS_MOUNT" "nginx-logs" "web_project-dev_nginx-logs" "web_project_nginx-logs"
 
   ACTIVE_COLOR="$(get_active_color)"
   PREVIOUS_COLOR="$ACTIVE_COLOR"

@@ -17,6 +17,7 @@ Gateway 레이어는 외부 트래픽을 수용하고 Application·Monitoring �
 - `/monitoring/*` 경로에 대한 Basic Auth + CIDR 화이트리스트 적용
 - Certbot 기반 HTTPS 인증서 발급/갱신
 - Blue-Green 전환 시 안전한 Backend 스위칭
+- Nginx 액세스/에러 로그를 Monitoring 레이어와 공유하는 `nginx-logs` 볼륨에 기록합니다(`NGINX_LOGS_MOUNT`).
 
 ## 3. 디렉터리 구조
 
@@ -75,7 +76,7 @@ node ./scripts/compose-with-env.mjs \
   -- docker compose -f gateway/docker-compose.gateway.prod.yml up -d
 ```
 
-전환 전에는 새 Backend 색상이 Healthy 상태인지, `frontend-dist` 볼륨이 최신 dist로 채워졌는지 확인하세요. 세부 런북은 [`../../docs/operations.md`](../../docs/operations.md)를 참조합니다.
+전환 전에는 새 Backend 색상이 Healthy 상태인지, `frontend-dist` 볼륨이 최신 dist로 채워졌는지, `nginx-logs` 볼륨이 정상 마운트되어 있는지 확인하세요. 세부 런북은 [`../../docs/operations.md`](../../docs/operations.md)를 참조합니다.
 
 ## 5. 네트워크 구성
 
@@ -91,6 +92,7 @@ node ./scripts/compose-with-env.mjs \
 | 볼륨                                              | 환경          | 용도                  | 비고                                                          |
 | ------------------------------------------------- | ------------- | --------------------- | ------------------------------------------------------------- |
 | `web_project-dev_frontend-dist` / `frontend-dist` | 공통          | 프론트 dist 공유 볼륨 | Application 레이어가 dist를 채우고 Gateway가 읽기 전용 마운트 |
+| `web_project-dev_nginx-logs` / `nginx-logs`       | 공통          | Nginx 접근/에러 로그  | Monitoring 레이어(Telegraf/Promtail)가 읽기 전용 마운트       |
 | `web_project-dev_certbot-dev` / `certbot`         | 개발/프로덕션 | ACME 챌린지 웹루트    | 프로덕션에서는 절대 경로 바인드 가능                          |
 | `letsencrypt`, `letsencrypt-log`                  | 프로덕션      | 인증서 및 로그 보관   | `${HOME}/srv/web_project/gateway` 하위 경로 바인드 권장       |
 
@@ -105,7 +107,7 @@ cp infra/gateway/.env.gateway.example infra/gateway/.env.gateway.dev
 ```
 
 - 운영 파일은 Secrets(`GATEWAY_ENV_PRODUCTION_BASE64`)을 통해 서버 `${HOME}/srv/web_project/gateway/.env.gateway.prod`에 배포됩니다.
-- 핵심 변수: `NGINX_IMAGE`, `NGINX_TAG`, `APP_NETWORK_NAME`, `FE_DIST_MOUNT`, `CERTBOT_MOUNT`, `LETSENCRYPT_MOUNT`, `LETSENCRYPT_LOG_MOUNT`.
+- 핵심 변수: `NGINX_IMAGE`, `NGINX_TAG`, `APP_NETWORK_NAME`, `FE_DIST_MOUNT`, `NGINX_LOGS_MOUNT`, `CERTBOT_MOUNT`, `LETSENCRYPT_MOUNT`, `LETSENCRYPT_LOG_MOUNT`.
 
 ### 7.2. Nginx 환경 (`nginx/.env.*`)
 
