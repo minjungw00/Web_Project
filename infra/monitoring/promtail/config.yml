@@ -17,11 +17,90 @@ scrape_configs:
           host: ${HOSTNAME}
           __path__: /var/log/*.log
 
+  - job_name: nginx-access-logs
+    static_configs:
+      - targets: ["localhost"]
+        labels:
+          job: nginx-access
+          host: ${HOSTNAME}
+          __path__: /var/log/nginx/access.log
+    pipeline_stages:
+      # Parse Nginx access log format
+      - regex:
+          expression: '^(?P<remote_addr>[\w\.]+) - (?P<remote_user>[^ ]*) \[(?P<time_local>.*)\] "(?P<method>[A-Z]+) (?P<request>[^ ]*) HTTP/[^"]*" (?P<status>\d+) (?P<body_bytes_sent>\d+) "(?P<http_referer>[^"]*)" "(?P<http_user_agent>[^"]*)"'
+      # Extract labels
+      - labels:
+          client_ip: remote_addr
+          method: method
+          request: request
+          status: status
+          referer: http_referer
+          agent: http_user_agent
+      # Convert status to resp_code for compatibility with dashboard
+      - labels:
+          resp_code: status
+      # Parse timestamp
+      - timestamp:
+          source: time_local
+          format: 02/Jan/2006:15:04:05 -0700
+      # Create metrics
+      - metrics:
+          nginxlog_resp_bytes:
+            type: Counter
+            description: "Bytes sent in response"
+            source: body_bytes_sent
+            config:
+              action: add
+      - metrics:
+          nginxlog_requests_total:
+            type: Counter
+            description: "Total requests"
+            config:
+              action: inc
+
+  - job_name: nginx-error-logs
+    static_configs:
+      - targets: ["localhost"]
+        labels:
+          job: nginx-error
+          host: ${HOSTNAME}
+          __path__: /var/log/nginx/error.log
+
   - job_name: docker-containers
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
     pipeline_stages:
       - docker: {}
+      # Parse Nginx logs from Docker containers
+      - match:
+          selector: '{compose_service="nginx"}'
+          stages:
+            - regex:
+                expression: '^(?P<remote_addr>[\w\.]+) - (?P<remote_user>[^ ]*) \[(?P<time_local>.*)\] "(?P<method>[A-Z]+) (?P<request>[^ ]*) HTTP/[^"]*" (?P<status>\d+) (?P<body_bytes_sent>\d+) "(?P<http_referer>[^"]*)" "(?P<http_user_agent>[^"]*)"'
+            - labels:
+                client_ip: remote_addr
+                method: method
+                request: request
+                status: status
+                resp_code: status
+                referer: http_referer
+                agent: http_user_agent
+            - timestamp:
+                source: time_local
+                format: 02/Jan/2006:15:04:05 -0700
+            - metrics:
+                nginxlog_resp_bytes:
+                  type: Counter
+                  description: "Bytes sent in response"
+                  source: body_bytes_sent
+                  config:
+                    action: add
+            - metrics:
+                nginxlog_requests_total:
+                  type: Counter
+                  description: "Total requests"
+                  config:
+                    action: inc
       - labeldrop:
           - filename
     relabel_configs:

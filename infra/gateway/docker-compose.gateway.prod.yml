@@ -20,6 +20,7 @@ services:
       - ${LETSENCRYPT_MOUNT:-letsencrypt}:/etc/letsencrypt
       - ${LETSENCRYPT_LOG_MOUNT:-letsencrypt-log}:/var/log/letsencrypt
       - ${NGINX_MONITORING_HTPASSWD_FILE:-./nginx/monitoring.htpasswd.prod}:/etc/nginx/secrets/monitoring.htpasswd:ro
+      - ${NGINX_LOGS_MOUNT:-nginx-logs}:/var/log/nginx
     healthcheck:
       test:
         [
@@ -52,3 +53,6 @@ volumes:
   certbot:
   letsencrypt:
   letsencrypt-log:
+  nginx-logs:
+    external: true
+    name: web_project_nginx-logs

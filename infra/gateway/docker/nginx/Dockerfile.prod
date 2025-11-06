@@ -5,6 +5,11 @@ FROM nginx:1.29-alpine
 
 RUN apk add --no-cache bash gettext curl
 
+# Remove symlinks and create real log files for Telegraf
+RUN rm -f /var/log/nginx/access.log /var/log/nginx/error.log \
+	&& touch /var/log/nginx/access.log /var/log/nginx/error.log \
+	&& chown nginx:nginx /var/log/nginx/access.log /var/log/nginx/error.log
+
 # Copy nginx templates and snippets
 COPY infra/gateway/nginx/default.prod.conf /etc/nginx/templates/default.conf.template
 COPY infra/gateway/nginx/proxy-headers.conf /etc/nginx/snippets/proxy-headers.conf

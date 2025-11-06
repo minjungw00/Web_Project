@@ -21,6 +21,7 @@ services:
       - ${CERTBOT_DEV_MOUNT:-certbot-dev}:/var/www/certbot
       - ${FE_DIST_MOUNT:-frontend-dist}:/usr/share/nginx/html:ro
       - ${NGINX_MONITORING_HTPASSWD_FILE:-./nginx/monitoring.htpasswd.dev}:/etc/nginx/secrets/monitoring.htpasswd:ro
+      - ${NGINX_LOGS_MOUNT:-nginx-logs}:/var/log/nginx
     healthcheck:
       test:
         ["CMD-SHELL", "curl -sf http://localhost/healthz >/dev/null || exit 1"]
@@ -43,3 +44,6 @@ volumes:
     external: true
     name: web_project-dev_frontend-dist
   certbot-dev:
+  nginx-logs:
+    external: true
+    name: web_project-dev_nginx-logs

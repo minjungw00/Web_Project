@@ -18,6 +18,7 @@
 | 범주              | 컨테이너/엔드포인트               | 주요 역할                                    | 기본 포트 |
 | ----------------- | --------------------------------- | -------------------------------------------- | --------- |
 | Metrics 수집      | Prometheus                        | Exporter/서비스의 메트릭 스크레이핑 및 저장  | 9090      |
+| 수집 에이전트     | Telegraf                          | 시스템/Nginx/로그 파싱 메트릭 → Prometheus   | 9273      |
 | 시스템 지표       | node_exporter                     | 호스트 OS/Hardware 지표 수집                 | 9100      |
 | 컨테이너 지표     | cAdvisor                          | Docker 컨테이너 자원 사용량 모니터링         | 8080      |
 | 웹 서버 지표      | nginx_exporter                    | Nginx 요청/상태 지표                         | 9113      |
@@ -30,6 +31,8 @@
 | 알림              | Alertmanager                      | Slack/Email/Webhook 경보 라우팅              | 9093      |
 
 > Spring Boot Backend는 `/api/actuator/prometheus`를 직접 노출하므로 별도 exporter가 필요 없습니다. Blue/Green 색상 모두 동일 엔드포인트를 제공하므로 Prometheus job에 두 색상의 서비스를 함께 등록합니다.
+
+> 업데이트: 모니터링 스택에 Telegraf가 추가되었습니다. Telegraf는 Nginx stub_status 및 액세스 로그를 파싱해 메트릭을 노출하고(기본 9273/tcp), 일부 시스템 지표(cpu, mem, net 등)도 함께 제공합니다. 기존 nginx_exporter는 유지 가능하나, 대시보드에 따라 Telegraf 메트릭이 기본 소스로 사용됩니다.
 
 ---
 
@@ -54,6 +57,8 @@ infra/
         dashboards/
           dashboard.yml
           web-project-overview.json
+    telegraf/
+      telegraf.conf
     loki/config.yml
     promtail/config.yml
     loki/rules/ (옵션)
@@ -131,6 +136,11 @@ scrape_configs:
   - job_name: "mysqld"
     static_configs:
       - targets: ["mysqld-exporter:9104"]
+
+  - job_name: "telegraf"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["telegraf:9273"]
 
   - job_name: "blackbox"
     metrics_path: /probe
@@ -248,3 +258,93 @@ location ^~ /monitoring/grafana/ {
 ---
 
 Blue-Green 배포와 분리된 모니터링 스택을 유지하면 배포 중에도 동일한 데이터 소스에서 상태를 확인할 수 있습니다. 위 가이드를 참고해 `infra/monitoring` 구성을 유지하고, 필요 시 `docs/operations.md`의 Runbook과 함께 사용하세요.
+
+---
+
+## 9. 트러블슈팅 모음집 (통합)
+
+이 섹션은 다음 개별 문서를 통합 요약한 것입니다. 원문은 정리 후 삭제 예정입니다.
+
+- `docs/mysql-monitoring-dashboard-fix.md`
+- `docs/mysql-monitoring-fix-summary.md`
+- `docs/nginx-monitoring-telegraf-setup.md`
+
+### 9.1 MySQL 대시보드 "No data" 이슈 (Grafana)
+
+증상: MySQL Overview 대시보드의 일부 패널(Buffer Pool Size of Total RAM, System Charts 일체, Process States 등)이 "No data" 표시.
+
+핵심 원인 및 조치:
+
+- instance 레이블 불일치: MySQL 메트릭(`mysqld-exporter:9104`)과 시스템 메트릭(`node-exporter:9100`)이 서로 다른 instance 값을 사용함.
+  - 대안 1: 대시보드 변수 `node_instance`를 추가하고, 시스템 메트릭 쿼리에서 `instance="$node_instance"` 사용.
+  - 대안 2: 조인 실패를 피하기 위해 `scalar()` 또는 `ignoring(instance)`/`group_left()` 사용.
+- 메트릭 이름 차이: `mysql_info_schema_threads` → `mysql_info_schema_processlist_threads`로 수정.
+- Query Cache 패널: MySQL 8.0+에서 제거된 기능이므로 "No data"가 정상.
+
+권장 쿼리 예시:
+
+```promql
+(mysql_global_variables_innodb_buffer_pool_size{instance="$host"} * 100)
+  / scalar(node_memory_MemTotal_bytes{instance="$node_instance"})
+```
+
+자동화: `scripts/fix-mysql-dashboard.py`를 통해 변수 추가 및 쿼리 일괄 치환을 지원합니다.
+
+검증 체크:
+
+- Prometheus에서 `mysql_up`, `node_memory_MemTotal_bytes` 조회
+- Grafana 변수 드롭다운에서 Host=`mysqld-exporter:9104`, Node Instance=`node-exporter:9100` 선택
+
+### 9.2 MySQL 메트릭 수집 정상화 체크리스트
+
+구성 변경:
+
+- Performance Schema 활성화: `infra/infrastructure/mysql/my.cnf`
+  - `performance_schema = ON`, `innodb_monitor_enable = all` 등
+- mysqld_exporter 컬렉터 확장: `infra/monitoring/docker-compose.monitoring.(dev|prod).yml`
+  - `--collect.perf_schema.*`, `--collect.info_schema.*`, `--collect.global_*` 플래그 활성화
+
+확인 방법:
+
+- 컨테이너 재시작 후 `curl http://localhost:9104/metrics | grep mysql_perf_schema`
+- Prometheus UI에서 다음 쿼리 테스트
+  - `mysql_info_schema_processlist_threads`
+  - `mysql_perf_schema_events_statements_total`
+  - `mysql_global_variables_innodb_buffer_pool_size`
+
+알려진 제한사항:
+
+- Query Cache 관련 패널은 MySQL 8.0+에서 항상 "No data"
+
+### 9.3 Nginx 대시보드 지표 부재 이슈 → Telegraf 도입
+
+배경: 기존 대시보드가 Telegraf 기반 메트릭(시스템 + Nginx + 로그 파싱)을 기대하는 반면, 수집 도구 부재로 대부분 "No data" 발생.
+
+조치 요약:
+
+- Telegraf 추가(포트 9273): `infra/monitoring/telegraf/telegraf.conf`
+  - inputs: `cpu`, `mem`, `disk`, `net`, `nginx`(stub_status), `tail`(access.log Grok 파싱)
+  - outputs: `prometheus_client`(9273)
+- Docker Compose 갱신: `infra/monitoring/docker-compose.monitoring.(dev|prod).yml`
+- Nginx 로그 공유 볼륨: `infra/gateway/docker-compose.gateway.(dev|prod).yml`에 `nginx-logs` 볼륨을 gateway와 monitoring에 공용 마운트
+- Prometheus 스크레이프: `telegraf` job 추가(위 3.4 예시 참조)
+
+Grafana 사용 팁:
+
+- Nginx 대시보드 상단 변수에서 instance=`telegraf:9273` 선택
+- 기대 메트릭: `nginx_accepts`, `nginx_requests`, `nginx_active`, `nginx_reading/writing/waiting`, `nginxlog_resp_bytes` 등
+
+빠른 점검:
+
+```bash
+# Telegraf 헬스
+docker logs web_project-monitoring-dev-telegraf-1 --tail=20 | grep -i 'prometheus_client\|listening\|nginx'
+
+# Prometheus 타겟
+curl -s http://localhost:9090/api/v1/targets | grep telegraf | tail -1
+
+# 메트릭 스팟 체크
+curl -s http://localhost:9273/metrics | grep -E '^(nginx_|nginxlog_|cpu_usage_|mem_)' | head -10
+```
+
+---

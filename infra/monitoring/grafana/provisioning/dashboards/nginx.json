@@ -218,9 +218,7 @@
       "options": {
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
+          "calcs": ["mean"],
           "values": false
         },
         "showThresholdLabels": false,
@@ -276,9 +274,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
+          "calcs": ["mean"],
           "values": false
         }
       },
@@ -703,9 +699,7 @@
         "displayMode": "gradient",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
+          "calcs": ["mean"],
           "values": false
         },
         "showUnfilled": true
@@ -853,9 +847,7 @@
         "displayMode": "gradient",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
+          "calcs": ["mean"],
           "values": false
         },
         "showUnfilled": true
@@ -1101,9 +1093,7 @@
         "justifyMode": "auto",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
+          "calcs": ["mean"],
           "values": false
         }
       },
@@ -1118,7 +1108,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Total Request 503 Resonse",
+      "title": "Total Request 503 Response",
       "type": "stat"
     },
     {
@@ -1292,9 +1282,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
+          "calcs": ["mean"],
           "values": false
         }
       },
@@ -1348,9 +1336,7 @@
         "displayMode": "lcd",
         "orientation": "horizontal",
         "reduceOptions": {
-          "calcs": [
-            "min"
-          ],
+          "calcs": ["min"],
           "values": false
         },
         "showUnfilled": true
@@ -1405,9 +1391,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "min"
-          ],
+          "calcs": ["min"],
           "values": false
         }
       },
@@ -1697,9 +1681,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
+          "calcs": ["mean"],
           "values": false
         }
       },

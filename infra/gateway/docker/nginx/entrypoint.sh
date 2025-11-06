@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+# Remove symlinks and create real log files for Telegraf
+rm -f /var/log/nginx/access.log /var/log/nginx/error.log
+touch /var/log/nginx/access.log /var/log/nginx/error.log
+chown nginx:nginx /var/log/nginx/access.log /var/log/nginx/error.log
+
 template="/etc/nginx/templates/default.conf.template"
 output="/etc/nginx/conf.d/default.conf"
 

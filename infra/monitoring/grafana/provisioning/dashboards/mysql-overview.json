@@ -46,9 +46,7 @@
         "limit": 100,
         "name": "PMM Annotations",
         "showIn": 0,
-        "tags": [
-          "pmm_annotation"
-        ],
+        "tags": ["pmm_annotation"],
         "type": "tags"
       }
     ]
@@ -63,9 +61,7 @@
       "icon": "dashboard",
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "QAN"
-      ],
+      "tags": ["QAN"],
       "targetBlank": false,
       "title": "Query Analytics",
       "type": "link",
@@ -75,9 +71,7 @@
       "asDropdown": true,
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "OS"
-      ],
+      "tags": ["OS"],
       "targetBlank": false,
       "title": "OS",
       "type": "dashboards"
@@ -86,9 +80,7 @@
       "asDropdown": true,
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "MySQL"
-      ],
+      "tags": ["MySQL"],
       "targetBlank": false,
       "title": "MySQL",
       "type": "dashboards"
@@ -97,9 +89,7 @@
       "asDropdown": true,
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "MongoDB"
-      ],
+      "tags": ["MongoDB"],
       "targetBlank": false,
       "title": "MongoDB",
       "type": "dashboards"
@@ -108,9 +98,7 @@
       "asDropdown": true,
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "HA"
-      ],
+      "tags": ["HA"],
       "targetBlank": false,
       "title": "HA",
       "type": "dashboards"
@@ -119,9 +107,7 @@
       "asDropdown": true,
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "Cloud"
-      ],
+      "tags": ["Cloud"],
       "targetBlank": false,
       "title": "Cloud",
       "type": "dashboards"
@@ -130,9 +116,7 @@
       "asDropdown": true,
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "Insight"
-      ],
+      "tags": ["Insight"],
       "targetBlank": false,
       "title": "Insight",
       "type": "dashboards"
@@ -141,9 +125,7 @@
       "asDropdown": true,
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "PMM"
-      ],
+      "tags": ["PMM"],
       "targetBlank": false,
       "title": "PMM",
       "type": "dashboards"
@@ -449,7 +431,7 @@
         "rgba(50, 172, 45, 0.97)"
       ],
       "datasource": "prometheus",
-      "decimals": 0,
+      "decimals": 1,
       "description": "**InnoDB Buffer Pool Size % of Total RAM**\n\nInnoDB maintains a storage area called the buffer pool for caching data and indexes in memory.  Knowing how the InnoDB buffer pool works, and taking advantage of it to keep frequently accessed data in memory, is one of the most important aspects of MySQL tuning. The goal is to keep the working set in memory. In most cases, this should be between 60%-90% of available memory on a dedicated database host, but depends on many factors.",
       "editable": true,
       "error": false,
@@ -518,7 +500,7 @@
           "calculatedInterval": "10m",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "(mysql_global_variables_innodb_buffer_pool_size{instance=\"$host\"} * 100) / on (instance) node_memory_MemTotal_bytes{instance=\"$host\"}",
+          "expr": "(mysql_global_variables_innodb_buffer_pool_size{instance=\"$host\"} * 100) / scalar(node_memory_MemTotal_bytes{instance=\"$node_instance\"})",
           "format": "time_series",
           "interval": "5m",
           "intervalFactor": 1,
@@ -803,9 +785,7 @@
         "mode": "time",
         "name": null,
         "show": true,
-        "values": [
-          "total"
-        ]
+        "values": ["total"]
       },
       "yaxes": [
         {
@@ -2167,7 +2147,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "node_memory_MemTotal_bytes{instance=\"$host\"}",
+          "expr": "node_memory_MemTotal_bytes{instance=\"$node_instance\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "System Memory",
@@ -2760,7 +2740,7 @@
           "calculatedInterval": "2m",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "mysql_info_schema_threads{instance=\"$host\"}",
+          "expr": "mysql_info_schema_processlist_threads{instance=\"$host\"}",
           "interval": "$interval",
           "intervalFactor": 1,
           "legendFormat": "{{ state }}",
@@ -2857,7 +2837,7 @@
           "calculatedInterval": "2m",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "topk(5, avg_over_time(mysql_info_schema_threads{instance=\"$host\"}[1h]))",
+          "expr": "topk(5, avg_over_time(mysql_info_schema_processlist_threads{instance=\"$host\"}[1h]))",
           "interval": "1h",
           "intervalFactor": 1,
           "legendFormat": "{{ state }}",
@@ -3888,7 +3868,7 @@
           "calculatedInterval": "2s",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "rate(node_vmstat_pgpgin{instance=\"$host\"}[$interval]) * 1024 or irate(node_vmstat_pgpgin{instance=\"$host\"}[5m]) * 1024",
+          "expr": "rate(node_vmstat_pgpgin{instance=\"$node_instance\"}[$interval]) * 1024 or irate(node_vmstat_pgpgin{instance=\"$node_instance\"}[5m]) * 1024",
           "interval": "$interval",
           "intervalFactor": 1,
           "legendFormat": "Page In",
@@ -3901,7 +3881,7 @@
           "calculatedInterval": "2s",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "rate(node_vmstat_pgpgout{instance=\"$host\"}[$interval]) * 1024 or irate(node_vmstat_pgpgout{instance=\"$host\"}[5m]) * 1024",
+          "expr": "rate(node_vmstat_pgpgout{instance=\"$node_instance\"}[$interval]) * 1024 or irate(node_vmstat_pgpgout{instance=\"$node_instance\"}[5m]) * 1024",
           "interval": "$interval",
           "intervalFactor": 1,
           "legendFormat": "Page Out",
@@ -4002,7 +3982,7 @@
           "calculatedInterval": "2s",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "node_memory_MemTotal_bytes{instance=\"$host\"} - (node_memory_MemFree_bytes{instance=\"$host\"} + node_memory_Buffers{instance=\"$host\"} + node_memory_Cached{instance=\"$host\"})",
+          "expr": "node_memory_MemTotal_bytes{instance=\"$node_instance\"} - (node_memory_MemFree_bytes{instance=\"$node_instance\"} + node_memory_Buffers{instance=\"$node_instance\"} + node_memory_Cached{instance=\"$node_instance\"})",
           "interval": "$interval",
           "intervalFactor": 1,
           "legendFormat": "Used",
@@ -4015,7 +3995,7 @@
           "calculatedInterval": "2s",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "node_memory_MemFree_bytes{instance=\"$host\"}",
+          "expr": "node_memory_MemFree_bytes{instance=\"$node_instance\"}",
           "interval": "$interval",
           "intervalFactor": 1,
           "legendFormat": "Free",
@@ -4028,7 +4008,7 @@
           "calculatedInterval": "2s",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "node_memory_Buffers{instance=\"$host\"}",
+          "expr": "node_memory_Buffers{instance=\"$node_instance\"}",
           "interval": "$interval",
           "intervalFactor": 1,
           "legendFormat": "Buffers",
@@ -4041,7 +4021,7 @@
           "calculatedInterval": "2s",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "node_memory_Cached{instance=\"$host\"}",
+          "expr": "node_memory_Cached{instance=\"$node_instance\"}",
           "interval": "$interval",
           "intervalFactor": 1,
           "legendFormat": "Cached",
@@ -4166,7 +4146,7 @@
           "calculatedInterval": "2s",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "clamp_max(((avg by (mode) ( (clamp_max(rate(node_cpu_seconds_total{instance=\"$host\",mode!=\"idle\"}[$interval]),1)) or (clamp_max(irate(node_cpu_seconds_total{instance=\"$host\",mode!=\"idle\"}[5m]),1)) ))*100 or (avg_over_time(node_cpu_seconds_total_average{instance=~\"$host\", mode!=\"total\", mode!=\"idle\"}[$interval]) or avg_over_time(node_cpu_seconds_total_average{instance=~\"$host\", mode!=\"total\", mode!=\"idle\"}[5m]))),100)",
+          "expr": "clamp_max(((avg by (mode) ( (clamp_max(rate(node_cpu_seconds_total{instance=\"$node_instance\",mode!=\"idle\"}[$interval]),1)) or (clamp_max(irate(node_cpu_seconds_total{instance=\"$node_instance\",mode!=\"idle\"}[5m]),1)) ))*100 or (avg_over_time(node_cpu_seconds_total_average{instance=~\"$node_instance\", mode!=\"total\", mode!=\"idle\"}[$interval]) or avg_over_time(node_cpu_seconds_total_average{instance=~\"$node_instance\", mode!=\"total\", mode!=\"idle\"}[5m]))),100)",
           "format": "time_series",
           "hide": false,
           "interval": "$interval",
@@ -4177,7 +4157,7 @@
           "step": 20
         },
         {
-          "expr": "clamp_max(max by () (sum  by (cpu) ( (clamp_max(rate(node_cpu_seconds_total{instance=\"$host\",mode!=\"idle\",mode!=\"iowait\"}[$interval]),1)) or (clamp_max(irate(node_cpu_seconds_total{instance=\"$host\",mode!=\"idle\",mode!=\"iowait\"}[5m]),1)) ))*100,100)",
+          "expr": "clamp_max(max by () (sum  by (cpu) ( (clamp_max(rate(node_cpu_seconds_total{instance=\"$node_instance\",mode!=\"idle\",mode!=\"iowait\"}[$interval]),1)) or (clamp_max(irate(node_cpu_seconds_total{instance=\"$node_instance\",mode!=\"idle\",mode!=\"iowait\"}[5m]),1)) ))*100,100)",
           "format": "time_series",
           "hide": true,
           "interval": "$interval",
@@ -4187,7 +4167,7 @@
           "step": 20
         },
         {
-          "expr": "node_load1{instance=\"$host\"}",
+          "expr": "node_load1{instance=\"$node_instance\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -4285,7 +4265,7 @@
           "calculatedInterval": "2m",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "sum((rate(node_disk_read_time_seconds_total{device!~\"dm-.+\", instance=\"$host\"}[$interval]) / rate(node_disk_reads_completed_total{device!~\"dm-.+\", instance=\"$host\"}[$interval])) or (irate(node_disk_read_time_seconds_total{device!~\"dm-.+\", instance=\"$host\"}[5m]) / irate(node_disk_reads_completed_total{device!~\"dm-.+\", instance=\"$host\"}[5m]))\nor avg_over_time(aws_rds_read_latency_average{instance=\"$host\"}[$interval]) or avg_over_time(aws_rds_read_latency_average{instance=\"$host\"}[5m]))",
+          "expr": "sum((rate(node_disk_read_time_seconds_total{device!~\"dm-.+\", instance=\"$node_instance\"}[$interval]) / rate(node_disk_reads_completed_total{device!~\"dm-.+\", instance=\"$node_instance\"}[$interval])) or (irate(node_disk_read_time_seconds_total{device!~\"dm-.+\", instance=\"$node_instance\"}[5m]) / irate(node_disk_reads_completed_total{device!~\"dm-.+\", instance=\"$node_instance\"}[5m]))\nor avg_over_time(aws_rds_read_latency_average{instance=\"$node_instance\"}[$interval]) or avg_over_time(aws_rds_read_latency_average{instance=\"$node_instance\"}[5m]))",
           "format": "time_series",
           "interval": "$interval",
           "intervalFactor": 1,
@@ -4299,7 +4279,7 @@
           "calculatedInterval": "2m",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "sum((rate(node_disk_write_time_seconds_total{device!~\"dm-.+\", instance=\"$host\"}[$interval]) / rate(node_disk_writes_completed_total{device!~\"dm-.+\", instance=\"$host\"}[$interval])) or (irate(node_disk_write_time_seconds_total{device!~\"dm-.+\", instance=\"$host\"}[5m]) / irate(node_disk_writes_completed_total{device!~\"dm-.+\", instance=\"$host\"}[5m])) or \navg_over_time(aws_rds_write_latency_average{instance=\"$host\"}[$interval]) or avg_over_time(aws_rds_write_latency_average{instance=\"$host\"}[5m]))",
+          "expr": "sum((rate(node_disk_write_time_seconds_total{device!~\"dm-.+\", instance=\"$node_instance\"}[$interval]) / rate(node_disk_writes_completed_total{device!~\"dm-.+\", instance=\"$node_instance\"}[$interval])) or (irate(node_disk_write_time_seconds_total{device!~\"dm-.+\", instance=\"$node_instance\"}[5m]) / irate(node_disk_writes_completed_total{device!~\"dm-.+\", instance=\"$node_instance\"}[5m])) or \navg_over_time(aws_rds_write_latency_average{instance=\"$node_instance\"}[$interval]) or avg_over_time(aws_rds_write_latency_average{instance=\"$node_instance\"}[5m]))",
           "format": "time_series",
           "interval": "$interval",
           "intervalFactor": 1,
@@ -4407,7 +4387,7 @@
           "calculatedInterval": "2s",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "sum(rate(node_network_receive_bytes_total{instance=\"$host\", device!=\"lo\"}[$interval])) or sum(irate(node_network_receive_bytes_total{instance=\"$host\", device!=\"lo\"}[5m])) or sum(max_over_time(rdsosmetrics_network_rx{instance=\"$host\"}[$interval])) or sum(max_over_time(rdsosmetrics_network_rx{instance=\"$host\"}[5m])) ",
+          "expr": "sum(rate(node_network_receive_bytes_total{instance=\"$node_instance\", device!=\"lo\"}[$interval])) or sum(irate(node_network_receive_bytes_total{instance=\"$node_instance\", device!=\"lo\"}[5m])) or sum(max_over_time(rdsosmetrics_network_rx{instance=\"$node_instance\"}[$interval])) or sum(max_over_time(rdsosmetrics_network_rx{instance=\"$node_instance\"}[5m])) ",
           "format": "time_series",
           "interval": "$interval",
           "intervalFactor": 1,
@@ -4421,7 +4401,7 @@
           "calculatedInterval": "2s",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "sum(rate(node_network_transmit_bytes_total{instance=\"$host\", device!=\"lo\"}[$interval])) or sum(irate(node_network_transmit_bytes_total{instance=\"$host\", device!=\"lo\"}[5m])) or\nsum(max_over_time(rdsosmetrics_network_tx{instance=\"$host\"}[$interval])) or sum(max_over_time(rdsosmetrics_network_tx{instance=\"$host\"}[5m]))",
+          "expr": "sum(rate(node_network_transmit_bytes_total{instance=\"$node_instance\", device!=\"lo\"}[$interval])) or sum(irate(node_network_transmit_bytes_total{instance=\"$node_instance\", device!=\"lo\"}[5m])) or\nsum(max_over_time(rdsosmetrics_network_tx{instance=\"$node_instance\"}[$interval])) or sum(max_over_time(rdsosmetrics_network_tx{instance=\"$node_instance\"}[5m]))",
           "format": "time_series",
           "interval": "$interval",
           "intervalFactor": 1,
@@ -4522,7 +4502,7 @@
           "calculatedInterval": "2s",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "rate(node_vmstat_pswpin{instance=\"$host\"}[$interval]) * 4096 or irate(node_vmstat_pswpin{instance=\"$host\"}[5m]) * 4096",
+          "expr": "rate(node_vmstat_pswpin{instance=\"$node_instance\"}[$interval]) * 4096 or irate(node_vmstat_pswpin{instance=\"$node_instance\"}[5m]) * 4096",
           "interval": "$interval",
           "intervalFactor": 1,
           "legendFormat": "Swap In (Reads)",
@@ -4535,7 +4515,7 @@
           "calculatedInterval": "2s",
           "datasourceErrors": {},
           "errors": {},
-          "expr": "rate(node_vmstat_pswpout{instance=\"$host\"}[$interval]) * 4096 or irate(node_vmstat_pswpout{instance=\"$host\"}[5m]) * 4096",
+          "expr": "rate(node_vmstat_pswpout{instance=\"$node_instance\"}[$interval]) * 4096 or irate(node_vmstat_pswpout{instance=\"$node_instance\"}[5m]) * 4096",
           "interval": "$interval",
           "intervalFactor": 1,
           "legendFormat": "Swap Out (Writes)",
@@ -4590,10 +4570,7 @@
   "refresh": "1m",
   "schemaVersion": 16,
   "style": "dark",
-  "tags": [
-    "Percona",
-    "MySQL"
-  ],
+  "tags": ["Percona", "MySQL"],
   "templating": {
     "list": [
       {
@@ -4680,6 +4657,29 @@
         "tagsQuery": null,
         "type": "query",
         "useTags": false
+      },
+      {
+        "allFormat": "glob",
+        "allValue": null,
+        "current": {},
+        "datasource": "prometheus",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Node Instance",
+        "multi": false,
+        "multiFormat": "regex values",
+        "name": "node_instance",
+        "options": [],
+        "query": "label_values(node_exporter_build_info, instance)",
+        "refresh": 1,
+        "refresh_on_load": false,
+        "regex": "",
+        "sort": 1,
+        "tagValuesQuery": null,
+        "tags": [],
+        "tagsQuery": null,
+        "type": "query",
+        "useTags": false
       }
     ]
   },
@@ -4706,17 +4706,7 @@
       "1d"
     ],
     "status": "Stable",
-    "time_options": [
-      "5m",
-      "15m",
-      "1h",
-      "6h",
-      "12h",
-      "24h",
-      "2d",
-      "7d",
-      "30d"
-    ],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"],
     "type": "timepicker"
   },
   "timezone": "browser",

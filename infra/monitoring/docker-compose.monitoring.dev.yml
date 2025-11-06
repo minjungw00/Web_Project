@@ -24,6 +24,7 @@ services:
       - nginx-exporter
       - mysqld-exporter
       - blackbox-exporter
+      - telegraf
     networks:
       - webnet
 
@@ -132,11 +133,21 @@ services:
       - --path.sysfs=/host/sys
       - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
       - --collector.filesystem.fs-types-exclude=^(sys|proc|autofs|cgroup|devpts|devtmpfs|nsfs|overlay|fuse.*|tmpfs|rpc_pipefs|mqueue)$$
+      - --collector.processes
+      - --collector.ethtool
+      - --collector.systemd
+      - --collector.interrupts
     pid: host
+    cap_add:
+      - NET_ADMIN
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
+      - /run/systemd:/run/systemd:ro
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro
+    ports:
+      - "9100:9100"
     networks:
       - webnet
 
@@ -151,6 +162,8 @@ services:
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8080:8080"
     networks:
       - webnet
 
@@ -159,6 +172,8 @@ services:
     image: nginx/nginx-prometheus-exporter:latest
     command:
       - -nginx.scrape-uri=${NGINX_EXPORTER_SCRAPE_URI:-http://nginx/nginx_status}
+    ports:
+      - "9113:9113"
     networks:
       - webnet
 
@@ -168,8 +183,25 @@ services:
     command:
       - --config.my-cnf=/etc/.mysqld_exporter.cnf
       - --mysqld.address=${MYSQL_EXPORTER_ADDRESS:-mysql:3306}
+      - --collect.global_status
+      - --collect.global_variables
+      - --collect.info_schema.innodb_metrics
+      - --collect.info_schema.processlist
+      - --collect.info_schema.tables
+      - --collect.info_schema.tablestats
+      - --collect.info_schema.userstats
+      - --collect.perf_schema.eventsstatements
+      - --collect.perf_schema.eventsstatementssum
+      - --collect.perf_schema.eventswaits
+      - --collect.perf_schema.file_events
+      - --collect.perf_schema.file_instances
+      - --collect.perf_schema.indexiowaits
+      - --collect.perf_schema.tableiowaits
+      - --collect.perf_schema.tablelocks
     volumes:
       - ./mysqld-exporter/.my.cnf.dev:/etc/.mysqld_exporter.cnf:ro
+    ports:
+      - "9104:9104"
     networks:
       - webnet
 
@@ -178,6 +210,20 @@ services:
     image: prom/blackbox-exporter:latest
     ports:
       - "9115:9115"
+    networks:
+      - webnet
+
+  telegraf:
+    <<: *default-dns
+    image: telegraf:latest
+    environment:
+      TELEGRAF_ENVIRONMENT: dev
+      TELEGRAF_NGINX_STATUS_URL: ${TELEGRAF_NGINX_STATUS_URL:-http://nginx/nginx_status}
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${NGINX_LOGS_MOUNT:-nginx-logs}:/var/log/nginx:ro
+    ports:
+      - "9273:9273"
     networks:
       - webnet
 
@@ -193,3 +239,6 @@ volumes:
   loki-data:
   promtail-positions:
   alertmanager-data:
+  nginx-logs:
+    external: true
+    name: web_project-dev_nginx-logs
