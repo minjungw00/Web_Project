@@ -26,16 +26,22 @@ infra/gateway/
 ├── .env.gateway.example                # Gateway Compose 환경 변수 템플릿
 ├── docker-compose.gateway.dev.yml      # 개발용 Compose 정의
 ├── docker-compose.gateway.prod.yml     # 프로덕션 Compose 정의
+├── certbot-issue.sh                    # 인증서 발급/갱신 스크립트
 ├── docker/
 │   └── nginx/
 │       ├── Dockerfile.dev              # 개발용 Nginx 이미지
 │       ├── Dockerfile.prod             # 프로덕션 Nginx 이미지
 │       └── entrypoint.sh               # envsubst 기반 템플릿 렌더링
+├── letsencrypt/                        # 프로덕션 인증서 보관 (호스트 경로 바인드)
+│   ├── etc/                            # /etc/letsencrypt 마운트
+│   ├── lib/                            # /var/lib/letsencrypt 마운트
+│   └── log/                            # /var/log/letsencrypt 마운트
+├── certbot/                            # ACME 챌린지 웹루트 (호스트 경로 바인드)
+│   └── .well-known/acme-challenge/
 └── nginx/
     ├── default.dev.conf                # 개발 Nginx 템플릿
     ├── default.prod.conf               # 프로덕션 템플릿 (서브패스, Basic Auth)
     ├── proxy-headers.conf              # 공통 프록시 헤더 스니펫
-    ├── certbot-issue.sh                # 인증서 발급/갱신 스크립트
     ├── .env.development.example        # 개발용 Nginx env 템플릿
     └── .env.production.example         # 프로덕션용 Nginx env 템플릿
 ```
@@ -117,24 +123,81 @@ cp infra/gateway/.env.gateway.example infra/gateway/.env.gateway.dev
 
 ## 8. SSL 인증서 설정
 
+### 8.1. 수동 발급/갱신
+
+프로덕션 서버에서 다음 명령을 실행합니다:
+
 ```bash
-cd ~/srv/web_project
-./gateway/nginx/certbot-issue.sh \
-  --base-dir ${HOME}/srv/web_project \
-  -d example.com -e admin@example.com
+cd ${HOME}/srv/web_project/gateway
+
+# Dry-run으로 사전 검증
+./certbot-issue.sh \
+  -d minjungw00.com -d www.minjungw00.com \
+  -e admin@minjungw00.com \
+  --dry-run \
+  --quiet
+
+# 실제 발급/갱신 (성공 시 자동으로 Nginx 리로드)
+./certbot-issue.sh \
+  -d minjungw00.com -d www.minjungw00.com \
+  -e admin@minjungw00.com \
+  --quiet
 ```
 
-- 80 포트가 열려 있고 `/.well-known/acme-challenge/`를 Gateway가 서빙해야 합니다.
-- 발급 후 `docker compose -f gateway/docker-compose.gateway.prod.yml up -d`로 Nginx를 재기동합니다.
+**스크립트 옵션:**
+
+- `-d, --domain`: 인증서 발급 도메인 (중복 가능)
+- `-e, --email`: Let's Encrypt 연락처 이메일
+- `--base-dir`: 기본값 현재 디렉터리 (gateway/). 절대 경로 권장.
+- `--compose-project`: Docker Compose 프로젝트명 (기본값: web_project)
+- `--nginx-service`: Nginx 서비스명 (기본값: gateway-nginx)
+- `--dry-run`: 갱신 리허설 (Nginx 재로드 스킵)
+- `--quiet`: 로그 최소화
+- `--staging`: Let's Encrypt 스테이징 환경 사용 (테스트 시)
+
+### 8.2. 자동 갱신 설정
+
+호스트 서버의 crontab에 다음 항목을 추가하세요:
+
+```bash
+crontab -e
+
+# 매일 오전 3:05에 인증서 갱신 시도 (실패 시 이메일 알림)
+5 3 * * * /bin/bash -lc 'cd ${HOME}/srv/web_project/gateway && ./certbot-issue.sh -d minjungw00.com -d www.minjungw00.com -e admin@minjungw00.com --quiet' 2>&1 | logger -t certbot-issue
+
+# (선택) 월요일 오전 3:10에 dry-run으로 사전 점검
+10 3 * * 1 /bin/bash -lc 'cd ${HOME}/srv/web_project/gateway && ./certbot-issue.sh -d minjungw00.com -d www.minjungw00.com -e admin@minjungw00.com --dry-run --quiet' 2>&1 | logger -t certbot-dryrun
+```
+
+**주요 사항:**
+
+- `--base-dir`을 생략하면 현재 디렉터리(gateway/)를 기본값으로 사용합니다.
+- 스크립트는 자동으로 Nginx 컨테이너를 감지하고 `nginx -s reload`를 실행합니다.
+- 리로드 실패 시 컨테이너 재시작을 시도합니다.
+- 80 포트가 열려있고 `/.well-known/acme-challenge/`가 서빙 가능해야 합니다.
+
+### 8.3. 인증서 상태 확인
+
+```bash
+# 만료일 조회
+openssl x509 -in ${HOME}/srv/web_project/gateway/letsencrypt/etc/live/minjungw00.com/cert.pem -noout -enddate
+
+# Certbot 갱신 로그 확인
+tail -50 ${HOME}/srv/web_project/gateway/letsencrypt/log/letsencrypt.log
+
+# 크론 실행 로그 확인 (systemd journal)
+journalctl -t certbot-issue -n 20
+```
 
 ## 9. 트러블슈팅
 
-| 증상                      | 점검 항목                                               | 조치                                                   |
-| ------------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
-| 컨테이너 기동 실패        | `docker network ls`에서 `APP_NETWORK_NAME` 확인         | 네트워크 생성 후 재기동                                |
-| 502/504 오류              | Backend 컨테이너 상태, `NGINX_BACKEND_HOST` 값          | Blue-Green 스크립트 재실행 또는 `--force-color`로 롤백 |
-| 모니터링 페이지 인증 실패 | `monitoring.htpasswd`, `NGINX_MONITORING_INTERNAL_CIDR` | Secrets 재배포 후 Nginx 재시작                         |
-| 인증서 갱신 실패          | `certbot`/`letsencrypt` 볼륨 권한, 80 포트 접근성       | 스크립트 로그 확인 후 재시도                           |
+| 증상                      | 점검 항목                                                        | 조치                                                   |
+| ------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------ |
+| 컨테이너 기동 실패        | `docker network ls`에서 `APP_NETWORK_NAME` 확인                  | 네트워크 생성 후 재기동                                |
+| 502/504 오류              | Backend 컨테이너 상태, `NGINX_BACKEND_HOST` 값                   | Blue-Green 스크립트 재실행 또는 `--force-color`로 롤백 |
+| 모니터링 페이지 인증 실패 | `monitoring.htpasswd`, `NGINX_MONITORING_INTERNAL_CIDR`          | Secrets 재배포 후 Nginx 재시작                         |
+| HTTPS 인증서 만료         | `openssl x509 -in letsencrypt/etc/live/*/cert.pem -noout -dates` | certbot-issue.sh 수동 실행 또는 crontab 재확인         |
+| 인증서 갱신 실패          | `tail -50 letsencrypt/log/letsencrypt.log`                       | 80 포트 접근성, ACME 경로 서빙 확인, 스크립트 권한     |
 
 추가 시나리오는 [`../../docs/operations.md`](../../docs/operations.md)의 Gateway 런북에 기록하세요.
 

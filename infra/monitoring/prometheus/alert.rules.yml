@@ -85,3 +85,32 @@ groups:
         annotations:
           summary: "MySQL connections nearing limit"
           description: "MySQL connections > 85% of max for 10m"
+
+  - name: ssl.rules
+    rules:
+      - alert: SSLCertificateExpiringSoon
+        expr: (probe_ssl_earliest_cert_expiry - time()) < 14*24*3600 and (probe_ssl_earliest_cert_expiry - time()) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS 인증서 만료 임박: {{ $labels.instance }}"
+          description: "도메인 {{ $labels.instance }}의 인증서가 14일 이내에 만료됩니다. 만료 시점: {{ humanizeTimestamp probe_ssl_earliest_cert_expiry }} (잔여: {{ humanizeDuration $value }})"
+
+      - alert: SSLCertificateExpiredCritical
+        expr: (probe_ssl_earliest_cert_expiry - time()) < 3*24*3600 and (probe_ssl_earliest_cert_expiry - time()) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TLS 인증서 만료 임박 (긴급): {{ $labels.instance }}"
+          description: "도메인 {{ $labels.instance }}의 인증서가 3일 이내에 만료됩니다. 만료 시점: {{ humanizeTimestamp probe_ssl_earliest_cert_expiry }} (잔여: {{ humanizeDuration $value }}). 즉시 갱신하세요!"
+
+      - alert: SSLCertificateExpired
+        expr: (probe_ssl_earliest_cert_expiry - time()) <= 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TLS 인증서 만료됨: {{ $labels.instance }}"
+          description: "도메인 {{ $labels.instance }}의 인증서가 이미 만료되었습니다. 즉시 갱신 필요! 만료 시점: {{ humanizeTimestamp probe_ssl_earliest_cert_expiry }}"
