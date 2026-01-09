@@ -157,19 +157,30 @@ if [[ $DRY_RUN -eq 0 ]]; then
     echo "Reloading Nginx configuration to apply new certificates..."
   fi
   
-  # Check if nginx container exists and is running
-  NGINX_CONTAINER=$(docker compose -p "$COMPOSE_PROJECT" ps "$NGINX_SERVICE" -q 2>/dev/null || echo "")
+  # Find nginx container by name pattern (e.g., web_project-gateway-nginx-1)
+  # Using docker ps --filter for more reliable container discovery
+  NGINX_CONTAINER=$(docker ps --filter "name=${COMPOSE_PROJECT}-${NGINX_SERVICE}" --filter "status=running" --format "{{.Names}}" 2>/dev/null | head -1)
   
   if [[ -n "$NGINX_CONTAINER" ]]; then
+    if [[ $QUIET -ne 1 ]]; then
+      echo "Found Nginx container: $NGINX_CONTAINER"
+    fi
+    
+    # Test nginx configuration before reloading
     if docker exec "$NGINX_CONTAINER" nginx -t >/dev/null 2>&1; then
-      docker exec "$NGINX_CONTAINER" nginx -s reload || {
+      # Try graceful reload first
+      if docker exec "$NGINX_CONTAINER" nginx -s reload >/dev/null 2>&1; then
+        if [[ $QUIET -ne 1 ]]; then
+          echo "Nginx configuration reloaded successfully."
+        fi
+      else
         if [[ $QUIET -ne 1 ]]; then
           echo "Warning: nginx -s reload failed, attempting container restart..."
         fi
-        docker compose -p "$COMPOSE_PROJECT" restart "$NGINX_SERVICE" >/dev/null 2>&1
-      }
-      if [[ $QUIET -ne 1 ]]; then
-        echo "Nginx configuration reloaded successfully."
+        docker restart "$NGINX_CONTAINER" >/dev/null 2>&1
+        if [[ $QUIET -ne 1 ]]; then
+          echo "Nginx container restarted."
+        fi
       fi
     else
       if [[ $QUIET -ne 1 ]]; then
@@ -178,7 +189,8 @@ if [[ $DRY_RUN -eq 0 ]]; then
     fi
   else
     if [[ $QUIET -ne 1 ]]; then
-      echo "Warning: Nginx container not found. Please restart it manually."
+      echo "Warning: Nginx container (${COMPOSE_PROJECT}-${NGINX_SERVICE}*) not found or not running."
+      echo "Please restart it manually with: docker restart ${COMPOSE_PROJECT}-${NGINX_SERVICE}-1"
     fi
   fi
 fi
