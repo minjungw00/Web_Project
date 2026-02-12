@@ -11,7 +11,7 @@ pre-commit:
       files: git diff --name-only --cached
       glob: "**/*.{js,jsx,ts,tsx}"
       root: "frontend/"
-      run: pnpm exec eslint --cache --max-warnings=0 {files}
+      run: pnpm exec eslint -c eslint.config.user.js --cache --max-warnings=0 {files}
 
     fe-prettier:
       files: git diff --name-only --cached

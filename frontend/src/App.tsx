@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { Fragment, useState } from 'react';
 
 import './App.css';
 import working from './assets/minjungw00_working_nobg.png';
@@ -56,7 +56,7 @@ const App = (): React.ReactElement => {
   };
 
   return (
-    <React.Fragment>
+    <Fragment>
       <div>
         <a
           href="https://github.com/minjungw00/Web_Project"
@@ -95,7 +95,7 @@ const App = (): React.ReactElement => {
           </pre>
         )}
       </div>
-    </React.Fragment>
+    </Fragment>
   );
 };
 

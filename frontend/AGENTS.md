@@ -10,8 +10,9 @@
 - Lint (fix): `pnpm --filter ./frontend lint:fix`
 - Format: `pnpm --filter ./frontend format`
 - Typecheck: `pnpm --filter ./frontend typecheck`
-- Tests: UNKNOWN (no test script found)
-  - Safe discovery: check frontend/package.json scripts, CI workflows, or add a test runner only with explicit approval.
+- Tests: `pnpm --filter ./frontend test`
+- Tests (watch): `pnpm --filter ./frontend test:watch`
+- Tests (CI): `pnpm --filter ./frontend test:ci`
 
 ## TDD default policy (non-negotiable)
 
@@ -45,8 +46,12 @@
 
 ## Testing policy
 
-- Test tooling is not configured in package scripts.
-- If you add tests, define the runner and scripts explicitly and keep them documented here.
+- Runner: Jest + React Testing Library.
+- Setup file: [frontend/src/test/setupTests.ts](frontend/src/test/setupTests.ts) (includes jest-dom matchers).
+- Test locations: `src/**/*.test.ts(x)` (co-locate with components).
+- Component tests: prefer user-facing assertions with `screen` and `user-event`.
+- API/mutation tests: mock `fetch` with `jest.spyOn(global, 'fetch')` or `global.fetch = jest.fn()`.
+- Avoid snapshot-only tests; assert behavior and accessibility where possible.
 
 ## Do not
 
