@@ -49,9 +49,12 @@
 - Runner: Jest + React Testing Library.
 - Setup file: [frontend/src/test/setupTests.ts](frontend/src/test/setupTests.ts) (includes jest-dom matchers).
 - Test locations: `src/**/*.test.ts(x)` (co-locate with components).
-- Component tests: prefer user-facing assertions with `screen` and `user-event`.
-- API/mutation tests: mock `fetch` with `jest.spyOn(global, 'fetch')` or `global.fetch = jest.fn()`.
-- Avoid snapshot-only tests; assert behavior and accessibility where possible.
+- Unit/component tests: prefer user-facing assertions with `screen` and `user-event`.
+- Integration tests: render the component tree and mock boundary APIs (`fetch`) at the edge.
+- API/mutation tests: stub `fetch` and assert request/response handling; reset mocks per test.
+- Accessibility checks: use jest-dom matchers (`toBeInTheDocument`, `toHaveAccessibleName`).
+- Determinism: no real network, timers, or random data without seeding/mocking.
+- Avoid snapshot-only tests; assert behavior and semantics.
 
 ## Do not
 
