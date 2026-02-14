@@ -46,8 +46,8 @@
 
 ## Testing policy
 
-- Runner: Jest + React Testing Library.
-- Setup file: [frontend/src/test/setupTests.ts](frontend/src/test/setupTests.ts) (includes jest-dom matchers).
+- Runner: Vitest + React Testing Library.
+- Setup file: [frontend/src/test/setupTests.ts](frontend/src/test/setupTests.ts) (includes jest-dom matchers for Vitest).
 - Test locations: `src/**/*.test.ts(x)` (co-locate with components).
 - Unit/component tests: prefer user-facing assertions with `screen` and `user-event`.
 - Integration tests: render the component tree and mock boundary APIs (`fetch`) at the edge.
