@@ -1,11 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import App from './App';
+import HomePage from '@/pages/home/HomePage';
 
-describe('App', () => {
+describe('HomePage', () => {
   it('renders the maintenance heading', () => {
-    render(<App />);
+    render(<HomePage />);
 
     expect(screen.getByText(/Working on the site.../i)).not.toBeNull();
   });

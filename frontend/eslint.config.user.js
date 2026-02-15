@@ -26,6 +26,50 @@ export default [
       'react-compiler': reactCompiler,
     },
     rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: ['..', '../*', '../**'],
+        },
+      ],
+      'import-x/no-restricted-paths': [
+        'error',
+        {
+          zones: [
+            {
+              target: './src/shared/**',
+              from: [
+                './src/app/**',
+                './src/pages/**',
+                './src/application/**',
+                './src/features/**',
+                './src/entities/**',
+              ],
+            },
+            {
+              target: './src/entities/**',
+              from: [
+                './src/app/**',
+                './src/pages/**',
+                './src/application/**',
+                './src/features/**',
+              ],
+            },
+            {
+              target: './src/features/**',
+              from: ['./src/app/**', './src/pages/**', './src/application/**'],
+            },
+            {
+              target: './src/application/**',
+              from: ['./src/app/**', './src/pages/**', './src/features/**'],
+            },
+            {
+              target: './src/pages/**',
+              from: ['./src/app/**'],
+            },
+          ],
+        },
+      ],
       'react-compiler/react-compiler': 'error',
       'react/react-in-jsx-scope': 'off',
       'react/jsx-uses-react': 'off',

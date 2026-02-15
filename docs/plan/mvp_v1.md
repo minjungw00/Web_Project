@@ -156,7 +156,7 @@
 
 ### P0 (필수)
 
-- [ ] Task ID: CORE-001
+- [x] Task ID: CORE-001
   - 유형: FE Architecture
   - 작업 설명: Frontend 디렉터리 구조 확정 및 라우팅 설계
   - 산출물: 라우팅 맵, `features/`, `shared/`, `pages/` 구조 정의
