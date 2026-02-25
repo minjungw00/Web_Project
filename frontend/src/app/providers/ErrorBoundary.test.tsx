@@ -4,8 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ErrorBoundary from '@/app/providers/ErrorBoundary';
 import i18n from '@/shared/i18n';
 
-const mockedUseRouteError = vi.fn<() => unknown>();
-const mockedIsRouteErrorResponse = vi.fn<(value: unknown) => boolean>();
+const { mockedUseRouteError, mockedIsRouteErrorResponse } = vi.hoisted(() => ({
+  mockedUseRouteError: vi.fn<() => unknown>(),
+  mockedIsRouteErrorResponse: vi.fn<(value: unknown) => boolean>(),
+}));
 
 vi.mock('react-router-dom', () => ({
   Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
