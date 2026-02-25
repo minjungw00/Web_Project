@@ -1,64 +1,49 @@
-# Backend AGENTS
+# AGENTS.md (Backend)
 
-## Setup + commands (source: root package.json, backend/build.gradle, lefthook.yml)
+## Scope
 
-- Build: `cd backend && ./gradlew build`
-- Run (dev): `cd backend && ./gradlew bootRun`
-- Tests: `cd backend && ./gradlew test`
-- Format: `cd backend && ./gradlew spotlessApply`
-- Checkstyle: `cd backend && ./gradlew checkstyleMain checkstyleTest`
-- SpotBugs: `cd backend && ./gradlew spotbugsMain spotbugsTest`
+Applies to `/backend/**`.
 
-## TDD default policy (non-negotiable)
+## Baseline Stack Facts
 
-- Write tests first for new behavior.
-- Follow Red → Green → Refactor.
-- Do not ship changes without tests unless explicitly exempted.
+- Build tool: Gradle wrapper (`./gradlew`)
+- Java toolchain: 21
+- Framework: Spring Boot 3.x
+- Servlet context path: `/api` (`server.servlet.context-path=/api`)
+- Actuator base path: `/actuator` (effective endpoint prefix: `/api/actuator/*`)
 
-## Tidy First + Augmented Coding rules
+## Standard Commands
 
-- Keep refactors separate from behavior changes; small diffs.
-- Prefer clarity over cleverness; avoid speculative edits.
-- Verify changes with tests and quality checks.
+Run from `/backend` unless noted.
 
-## Architecture constraints
+- Build: `./gradlew build`
+- Run app: `./gradlew bootRun`
+- Test: `./gradlew test`
+- Test (single class/method): `./gradlew test --tests <ClassName or ClassName.methodName>`
+- Full checks: `./gradlew check`
+- Formatting: `./gradlew spotlessApply`
+- Formatting check: `./gradlew spotlessCheck`
+- Checkstyle: `./gradlew checkstyleMain checkstyleTest`
+- SpotBugs: `./gradlew spotbugsMain spotbugsTest`
 
-- Spring Boot app with context path `/api` (see application.properties).
-- Existing packages:
-  - `com.minjungw00.backend.db` (DB health controller)
-  - `com.minjungw00.backend.temp` (temporary health controller)
-- Keep new controllers under feature packages within `com.minjungw00.backend.*`.
-- Avoid bypassing the context path or actuator base path (`/api/actuator/*`).
+From repo root, equivalent shortcuts exist in `package.json` (for example `pnpm run build:backend`).
 
-## DB / config policy
+## Working Rules
 
-- Production DB credentials must be provided via env vars (no defaults).
-- Tests use H2 in-memory DB (see test application.properties).
-- If schema changes are needed, document and coordinate with infra runbooks.
+- Prefer TDD for behavior changes (Red → Green → Refactor).
+- Keep tests deterministic and scoped to the smallest effective level.
+- Run targeted `--tests` first; run full `./gradlew test` only when broader confidence is required.
+- Use existing test setup (`spring-boot-starter-test`, JUnit Platform, H2 for tests); do not introduce a new test framework.
+- Keep public API contracts stable unless explicit approval is given.
+- Keep refactors and behavior changes separate when practical.
 
-## DB migrations policy
+## Database and Migration Policy
 
-- UNKNOWN (no migration tool config found).
-- Safe discovery: search the repo for Flyway/Liquibase config or check CI workflows for migration steps.
+- No migration tool configuration (Flyway/Liquibase) is currently defined in backend build/config.
+- Do not introduce or replace DB migration tooling without explicit approval.
+- Do not perform schema-breaking changes without approval and impact notes.
 
-## Directory conventions
+## Do Not
 
-- Main: [backend/src/main/java](backend/src/main/java)
-- Tests: [backend/src/test/java](backend/src/test/java)
-- Resources: [backend/src/main/resources](backend/src/main/resources)
-
-## Testing policy
-
-- JUnit via Spring Boot test starter.
-- Unit tests: isolate pure logic (no Spring context) where possible.
-- Integration tests: use Spring Boot test support with H2 in-memory DB (see test application.properties).
-- Controller tests: use Spring test utilities from `spring-boot-starter-test` when verifying web layer behavior.
-- Determinism: no real network calls; mock external boundaries.
-- Data setup: keep fixtures small and explicit; prefer builder helpers over shared mutable state.
-- Naming: keep JUnit classes aligned with production class names (e.g., `FooServiceTests`).
-
-## Do not
-
-- Do not change public API paths without updating gateway/proxy configs.
-- Do not commit secrets or .env files.
-- Do not skip Spotless/Checkstyle/SpotBugs in CI-related changes.
+- Do not bypass `check`/tests to make builds pass.
+- Do not commit secrets or environment credentials.

@@ -1,58 +1,51 @@
-# AGENTS
+# AGENTS.md (Root)
 
-## Project overview
+Global rules for AI agents working in this monorepo.
 
-- Monorepo for a personal web service: React/Vite frontend, Spring Boot backend, Docker-based infra.
-- Blue-Green deployment and observability are first-class concerns.
-- Docs in /docs define infra architecture, runbooks, and security.
+## Repository Scope
 
-## Monorepo map
+- `/frontend`: React + TypeScript + Vite application
+- `/backend`: Spring Boot (Gradle) service
+- `/infra`: Docker Compose-based infrastructure and deployment scripts
+- `/docs`: human-oriented reference documentation
 
-- /frontend: React + TypeScript (Vite)
-- /backend: Spring Boot (Java 21)
-- /infra: Docker Compose layers and deploy scripts
-- /docs: architecture/runbooks/security/monitoring
+## Rule Resolution (Mandatory)
 
-## Global rules
+Before editing any file, use the nearest `AGENTS.md` in this order:
 
-- Keep changes minimal, focused, and reversible; avoid speculative edits.
-- Never commit secrets or production .env files; only commit templates/examples.
-- Prefer existing scripts and documented procedures; do not invent new workflows.
-- Verify changes with the stack-appropriate checks and tests.
-- Separate refactors from behavior changes (Tidy First); keep PRs small.
-- If a stack-level AGENTS.md conflicts with this file, the stack-level file wins.
+1. Check the file's directory.
+2. Walk up parent directories until the repository root.
 
-## Command discovery (source of truth)
+Precedence:
 
-- Root scripts: package.json (pnpm workspace commands).
-- Stack docs: /frontend/README.md, /backend/README.md, /infra/README.md.
-- Infra runbooks and policies: /docs/infra/\*.md.
-- Hooks/quality gates: lefthook.yml (pre-commit / pre-push).
+- Nearest file wins.
+- Stack-level `AGENTS.md` overrides root rules for that stack.
+- If no closer file exists, this root file applies.
 
-## PR/commit hygiene
+## Execution Contract
 
-- Isolate structural tidying from behavior changes and test separately.
-- Provide a concise rationale for behavior changes; mention assumptions.
-- Use commitlint conventions (enforced by lefthook).
+- Use only commands defined in executable sources (`package.json`, Gradle tasks, CI workflows, compose scripts).
+- Keep diffs minimal and focused on the requested outcome.
+- Separate mechanical tidy-up from behavior changes when possible.
+- Never commit secrets, keys, tokens, or production credentials.
 
-## Directory-Level AGENTS.md Precedence (Mandatory)
+## Source of Truth Policy
 
-When performing any task inside a specific directory (e.g., /frontend, /backend, /infra), you MUST:
+- Treat `/docs` as reference.
+- If `/docs` conflicts with executable config, follow executable config and note the discrepancy.
 
-1. Locate the nearest AGENTS.md file in the current working directory or its parent directories.
-2. Read and apply that AGENTS.md before making any changes.
-3. Treat directory-level AGENTS.md as higher priority than the root AGENTS.md for that scope.
+## Verification
 
-Precedence Rules:
+- Validate behavior changes with existing project tooling (tests/build/lint/typecheck) at the smallest useful scope first.
 
-- The closest AGENTS.md to the file being modified takes priority.
-- If a rule in a stack-level AGENTS.md conflicts with the root AGENTS.md, the stack-level rule overrides for that stack.
-- You must not assume global rules apply if a more specific AGENTS.md exists.
+## Test Scope Policy (Agents)
 
-Operational Requirement:
-Before modifying any file, explicitly verify:
-
-- Which AGENTS.md governs this directory?
-- What constraints, commands, and prohibitions are defined there?
-
-Failure to consult the nearest AGENTS.md is considered a policy violation.
+- Default to targeted tests related to changed files; do not run full-suite tests first.
+- Use broad test runs only when targeted runs pass and broader confidence is required.
+- In VS Code agent runs, prefer targeted execution by specific test name first (more stable than broad run in this workspace).
+- If `Cannot find run action!` or file-filter resolution errors occur, do not jump to full-suite; retry with a narrower named test and stack-specific command below.
+- When using `runTests(files=...)`, use workspace-relative paths (e.g. `frontend/src/App.test.tsx`, `backend/src/test/...`) instead of absolute paths.
+- Preferred commands:
+  - Frontend single/related test files: `pnpm run test:frontend:file -- <test-file-or-glob>`
+  - Backend single test class/method: `pnpm run test:backend:class -- <ClassName or ClassName.methodName>`
+  - Full monorepo tests (last step only): `pnpm run test`

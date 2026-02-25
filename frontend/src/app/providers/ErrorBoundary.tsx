@@ -1,5 +1,7 @@
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
 
+import ErrorPage from '@/pages/error/ErrorPage';
+
 const ErrorBoundary = (): React.ReactElement => {
   const error = useRouteError();
   let message = 'Unexpected error';
@@ -10,12 +12,7 @@ const ErrorBoundary = (): React.ReactElement => {
     message = error.message;
   }
 
-  return (
-    <div>
-      <h1>Something went wrong</h1>
-      <p>{message}</p>
-    </div>
-  );
+  return <ErrorPage message={message} />;
 };
 
 export default ErrorBoundary;

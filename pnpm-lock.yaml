@@ -20,6 +20,9 @@ importers:
 
   frontend:
     dependencies:
+      '@remixicon/react':
+        specifier: ^4.9.0
+        version: 4.9.0(react@19.2.4)
       react:
         specifier: ^19.2.4
         version: 19.2.4
@@ -629,6 +632,11 @@ packages:
   '@pkgr/core@0.2.9':
     resolution: {integrity: sha512-QNqXyfVS2wm9hweSYD2O7F0G06uurj9kZ96TRQE5Y9hU7+tgdZwIkbAKc5Ocy1HxEY2kuDQa6cQ1WRs/O5LFKA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
+
+  '@remixicon/react@4.9.0':
+    resolution: {integrity: sha512-5/jLDD4DtKxH2B4QVXTobvV1C2uL8ab9D5yAYNtFt+w80O0Ys1xFOrspqROL3fjrZi+7ElFUWE37hBfaAl6U+Q==}
+    peerDependencies:
+      react: '>=18.2.0'
 
   '@rolldown/pluginutils@1.0.0-rc.3':
     resolution: {integrity: sha512-eybk3TjzzzV97Dlj5c+XrBFW57eTNhzod66y9HrBlzJ6NsCrWCp/2kaPS3K9wJmurBC0Tdw4yPjXKZqlznim3Q==}
@@ -3328,6 +3336,10 @@ snapshots:
       fastq: 1.19.1
 
   '@pkgr/core@0.2.9': {}
+
+  '@remixicon/react@4.9.0(react@19.2.4)':
+    dependencies:
+      react: 19.2.4
 
   '@rolldown/pluginutils@1.0.0-rc.3': {}
 

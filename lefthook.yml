@@ -36,6 +36,10 @@ pre-commit:
 pre-push:
   parallel: true
   commands:
+    fe-test:
+      root: "frontend/"
+      run: pnpm run test:ci
+
     fe-build:
       # 빌드 성공 보장(실제 서비스에선 pre-push 빌드가 부담스러우면 제거)
       root: "frontend/"

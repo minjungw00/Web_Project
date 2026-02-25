@@ -2,18 +2,19 @@
 
 ## 1. 목표와 범위
 
-- MVP 범위는 Portfolio/Blog/Shared(Core)에 한정한다. (CS Docs, Mini Games 제외)
+- MVP 핵심 범위는 Portfolio/Blog/Shared(Core)이며, 현재 구현에는 CS Docs/Mini Games 라우트가 샌드박스 성격으로 포함된다.
 - 읽기 전용 UI와 목록/상세 탐색이 완성 기준이다.
 - FE 디렉터리 구조, 라우팅, 데이터 흐름, SEO 메타 전략을 명시한다.
 - 현재 기술 스택: React 19 + Vite + TypeScript + Vitest/RTL, `/api` 프록시 기반 통신.
 
-## 2. 현재 FE 상태 요약 (2026-02-15 기준)
+## 2. 현재 FE 상태 요약 (2026-02-23 기준)
 
 - 엔트리: [frontend/src/main.tsx](frontend/src/main.tsx)
-- 루트 컴포넌트: [frontend/src/App.tsx](frontend/src/App.tsx)
+- 루트 컴포넌트: [frontend/src/app/App.tsx](frontend/src/app/App.tsx)
 - `/api` 프록시: [frontend/vite.config.ts](frontend/vite.config.ts)
-- Health check 테스트 UI만 존재 (`/api/actuator/health`, `/api/db/health`)
-- 전역 CSS만 사용: [frontend/src/index.css](frontend/src/index.css), [frontend/src/App.css](frontend/src/App.css)
+- 라우팅은 `app/routes.tsx` 단일 진입으로 관리되며 Home/Portfolio/Blog/CS Docs/Mini Games를 포함한다.
+- `application`/`entities`/`shared/api` 계층이 생성되어 페이지 내 도메인 상수·필터 로직을 분리했다.
+- 공통 페이지 스타일은 [frontend/src/shared/styles/page.css](frontend/src/shared/styles/page.css)로 이동했다.
 - 테스트 설정: [frontend/src/test/setupTests.ts](frontend/src/test/setupTests.ts)
 
 ## 3. 아키텍처 설계 전략
@@ -126,14 +127,20 @@ src/
   pages/
     home/
       HomePage.tsx
-      HomePage.module.css
+      home.css
     portfolio/
       PortfolioListPage.tsx
       PortfolioDetailPage.tsx
     blog/
       BlogListPage.tsx
       BlogDetailPage.tsx
+    cs-docs/
+      CSDocsPage.tsx
+    mini-games/
+      MiniGamesPage.tsx
   application/
+    home/
+      usecases.ts
     portfolio/
       usecases.ts
     blog/
@@ -144,61 +151,33 @@ src/
       Header.tsx
       Footer.tsx
       Navigation.tsx
-    portfolio/
-      PortfolioCard.tsx
-      ProjectOverview.tsx
-      ProjectExperienceList.tsx
-    blog/
-      BlogCard.tsx
-      MarkdownRenderer.tsx
-    seo/
-      useSeo.ts
-      SeoMeta.tsx
   entities/
+    home/
+      types.ts
+      mapper.ts
     portfolio/
       types.ts
-      schema.ts
       mapper.ts
     blog/
       types.ts
-      schema.ts
       mapper.ts
-    shared/
-      types.ts
   shared/
     api/
-      apiClient.ts
-      endpoints.ts
-      types.ts
-      errors.ts
+      home.ts
       portfolio.ts
       blog.ts
     ui/
       Button.tsx
       Card.tsx
-      Typography.tsx
-    hooks/
-      useAsync.ts
-      useFetch.ts
-    lib/
-      date.ts
-      format.ts
-      assert.ts
-      guard.ts
-    config/
-      env.ts
-      routes.ts
-    assets/
       ...
     styles/
-      typography.css
-      layout.css
+      page.css
 ```
 
 ### 구조 규칙
 
-- `pages`는 라우트 단위이며, `features`를 조합해 화면을 구성한다.
-- `pages`는 데이터 패칭을 시작하고, 결과를 `features`에 주입한다.
+- `pages`는 라우트 단위이며, 필요 시 `features` 또는 `shared/ui`를 조합해 화면을 구성한다.
+- `pages`는 데이터 패칭을 시작하고, 결과를 `features` 또는 `shared/ui`에 주입한다.
 - `application/*/usecases.ts`는 **유스케이스 오케스트레이션**만 정의한다.
 - `application`은 `shared/api/*` 호출과 `entities` 매핑을 조합한다.
 - `features`는 UI에만 집중한다. (데이터 패칭/오케스트레이션/매핑 금지)
@@ -238,6 +217,8 @@ src/
 - `/portfolio/:id` : Portfolio 상세
 - `/blog` : Blog 목록
 - `/blog/:id` : Blog 상세
+- `/cs-docs` : CS Docs (sandbox)
+- `/mini-games` : Mini Games (sandbox)
 
 ### 5.2 라우팅 구현 규칙
 

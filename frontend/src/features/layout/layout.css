@@ -1,0 +1,287 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-default);
+}
+
+.app-main {
+  flex: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.app-main-content {
+  width: 100%;
+  max-width: calc(var(--layout-breakpoint-lg));
+  margin-inline: auto;
+}
+
+.app-header {
+  position: relative;
+  z-index: 10;
+  background: color-mix(in srgb, var(--color-bg-surface) 60%, transparent);
+  backdrop-filter: blur(var(--border-focus));
+}
+
+.app-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--size-icon-glyph-sm);
+}
+
+.app-header-mobile {
+  padding: var(--spacing-section-sm);
+}
+
+.app-header-desktop {
+  display: none;
+}
+
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-inline-xs);
+  transition: opacity 0.2s ease;
+}
+
+.app-brand:hover {
+  opacity: 0.8;
+}
+
+.app-brand-name {
+  color: var(--color-bluegray-900);
+  font-size: var(--text-body-sm-size);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--text-caption-line-height);
+}
+
+.app-brand-dot {
+  width: var(--size-indicator-dot-md);
+  height: var(--size-indicator-dot-md);
+  border-radius: var(--radius-full);
+  background: var(--color-brand-primary);
+}
+
+.app-header-menu-mobile {
+  padding: 0 var(--spacing-inset-lg) var(--spacing-inset-md);
+}
+
+.app-menu-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-bluegray-900);
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control-small);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.app-menu-button:hover {
+  background: var(--color-bluegray-50);
+  color: var(--color-text-secondary);
+}
+
+.app-menu-button:active {
+  background: var(--color-bluegray-100);
+  color: var(--color-brand-primary);
+}
+
+.app-menu-icon {
+  width: var(--size-icon-glyph-menu);
+  height: var(--size-icon-glyph-menu);
+  color: currentColor;
+  display: block;
+}
+
+.app-nav .nav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-inline-sm);
+}
+
+.app-nav .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-inline-xs);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-body-sm-size);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--text-caption-line-height);
+}
+
+.app-nav .nav-link > span[aria-hidden='true'] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.app-nav .nav-link:hover {
+  color: var(--color-text-secondary);
+}
+
+.app-nav-icon {
+  width: var(--size-icon-glyph-sm);
+  height: var(--size-icon-glyph-sm);
+  color: currentColor;
+  display: block;
+  flex-shrink: 0;
+}
+
+.app-nav .nav-link-active {
+  color: var(--color-brand-primary);
+}
+
+.app-footer {
+  background: var(--color-bg-surface);
+  padding: var(--spacing-section-md) var(--spacing-section-lg);
+}
+
+.app-footer-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-stack-md);
+  align-items: center;
+  text-align: center;
+}
+
+.app-footer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-stack-xs);
+  align-items: center;
+}
+
+.app-footer-meta small {
+  font-size: var(--text-caption-size);
+  line-height: var(--text-caption-line-height);
+  color: var(--color-text-tertiary);
+}
+
+.app-footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-stack-md);
+  align-items: center;
+}
+
+.app-footer-socials,
+.app-footer-legal {
+  display: inline-flex;
+  gap: var(--spacing-inline-lg);
+  align-items: center;
+}
+
+.app-footer-icon {
+  width: var(--size-icon-button-lg);
+  height: var(--size-icon-button-lg);
+  border-radius: var(--radius-control-small);
+  background: var(--color-bluegray-50);
+  color: var(--color-bluegray-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.app-footer-icon:hover {
+  background: var(--color-bluegray-100);
+  color: var(--color-brand-primary);
+}
+
+.app-footer-social-icon {
+  width: var(--size-icon-glyph-md);
+  height: var(--size-icon-glyph-md);
+  color: var(--color-brand-primary);
+}
+
+.app-footer-brand-icon-wrap {
+  width: var(--size-icon-glyph-lg);
+  height: var(--size-icon-glyph-lg);
+  border-radius: var(--radius-control-small);
+  background: var(--color-bluegray-50);
+  color: var(--color-bluegray-700);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-footer-brand-icon {
+  width: var(--size-icon-glyph-xs);
+  height: var(--size-icon-glyph-xs);
+  color: var(--color-brand-primary);
+}
+
+.app-footer-legal {
+  gap: var(--spacing-inline-lg);
+}
+
+.app-footer-legal-link {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-caption-size);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  line-height: var(--size-line-height-tight-fixed);
+  transition: color 0.2s ease;
+}
+
+.app-footer-legal-link:hover {
+  color: var(--color-text-secondary);
+}
+
+@media (min-width: 48rem) {
+  .app-header-mobile,
+  .app-header-menu-mobile {
+    display: none;
+  }
+
+  .app-header-desktop {
+    display: flex;
+    padding: var(--spacing-section-sm) var(--spacing-section-lg);
+  }
+
+  .app-nav .nav-list {
+    gap: var(--spacing-inline-lg);
+  }
+
+  .app-nav .nav-link {
+    gap: var(--spacing-inline-xs);
+  }
+
+  .app-footer-inner {
+    flex-direction: row;
+    align-items: center;
+    align-self: stretch;
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .app-footer-meta {
+    align-items: flex-start;
+  }
+
+  .app-footer-links {
+    justify-content: flex-end;
+    align-items: center;
+    flex-direction: row;
+    gap: var(--spacing-section-lg);
+  }
+
+  .app-footer-legal {
+    gap: var(--spacing-inline-lg);
+  }
+}
