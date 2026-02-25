@@ -243,6 +243,20 @@
   color: var(--color-text-secondary);
 }
 
+.app-footer-language {
+  display: inline-flex;
+  gap: var(--spacing-inline-2xs);
+  align-items: center;
+}
+
+.app-footer-language .ui-category {
+  padding: var(--spacing-inline-xs) var(--spacing-inline-xs);
+  font-size: var(--text-caption-size);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--text-caption-line-height);
+  min-height: var(--size-control-sm);
+}
+
 @media (min-width: 48rem) {
   .app-header-mobile,
   .app-header-menu-mobile {

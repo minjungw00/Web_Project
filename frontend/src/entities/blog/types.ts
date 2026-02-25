@@ -1,3 +1,7 @@
+import type { SupportedLanguage } from '@/shared/i18n/language';
+
+export type LocalizedText = Record<SupportedLanguage, string>;
+
 export interface BlogPost {
   id: string;
   date: string;
@@ -12,10 +16,10 @@ export interface BlogPost {
 export interface BlogPostDto {
   id: string;
   date: string;
-  title: string;
-  description: string;
+  title: LocalizedText;
+  description: LocalizedText;
   badges: string[];
   category: string;
   mediaSrc?: string;
-  mediaAlt?: string;
+  mediaAlt?: LocalizedText;
 }

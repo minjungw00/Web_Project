@@ -13,9 +13,9 @@ describe('HomePage', () => {
     );
 
     expect(
-      screen.getByRole('heading', { name: /structured/i }),
+      screen.getByRole('heading', { name: /structured thinking/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/intelligence\./i)).toBeInTheDocument();
+    expect(screen.getByText(/proven by building\./i)).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: /portfolio/i }),
     ).toBeInTheDocument();

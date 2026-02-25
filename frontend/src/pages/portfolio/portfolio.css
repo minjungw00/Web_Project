@@ -34,6 +34,7 @@
   align-self: stretch;
   max-width: var(--layout-content-max-width);
   margin: 0;
+  white-space: pre-line;
   font-size: var(--text-body-md-size);
   line-height: var(--text-body-md-line-height);
   color: var(--color-text-secondary);

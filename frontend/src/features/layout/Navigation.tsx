@@ -4,6 +4,7 @@ import {
   RiBriefcase4Line,
   RiGamepadLine,
 } from '@remixicon/react';
+import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
 import { cn } from '@/shared/ui/index';
@@ -45,25 +46,46 @@ const defaultItems: NavigationItem[] = [
 
 const Navigation = ({
   items = defaultItems,
-}: NavigationProps): React.ReactElement => (
-  <nav aria-label="Primary" className="app-nav">
-    <ul className="nav-list">
-      {items.map((item) => (
-        <li key={item.to}>
-          <NavLink
-            to={item.to}
-            className={({ isActive }) =>
-              cn('nav-link', isActive && 'nav-link-active')
-            }
-          >
-            <span aria-hidden="true">{item.icon}</span>
-            <span>{item.label}</span>
-          </NavLink>
-        </li>
-      ))}
-    </ul>
-  </nav>
-);
+}: NavigationProps): React.ReactElement => {
+  const { t } = useTranslation();
+
+  const localizedItems = items.map((item) => {
+    if (item.to === '/portfolio') {
+      return { ...item, label: t('navigation.portfolio') };
+    }
+    if (item.to === '/blog') {
+      return { ...item, label: t('navigation.blog') };
+    }
+    if (item.to === '/cs-docs') {
+      return { ...item, label: t('navigation.docs') };
+    }
+    if (item.to === '/mini-games') {
+      return { ...item, label: t('navigation.miniGames') };
+    }
+
+    return item;
+  });
+
+  return (
+    <nav aria-label={t('navigation.ariaLabel')} className="app-nav">
+      <ul className="nav-list">
+        {localizedItems.map((item) => (
+          <li key={item.to}>
+            <NavLink
+              to={item.to}
+              className={({ isActive }) =>
+                cn('nav-link', isActive && 'nav-link-active')
+              }
+            >
+              <span aria-hidden="true">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+};
 
 Navigation.defaultProps = {
   items: defaultItems,

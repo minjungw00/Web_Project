@@ -15,8 +15,8 @@ describe('HomePage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText(/Structured/i)).toBeInTheDocument();
-    expect(screen.getByText(/Intelligence\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Structured Thinking,/i)).toBeInTheDocument();
+    expect(screen.getByText(/Proven by Building\./i)).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: /Mini Games/i }),
     ).toBeInTheDocument();
@@ -29,7 +29,9 @@ describe('HomePage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText(/Mini Games/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /mini games\s*\./i }),
+    ).toBeInTheDocument();
   });
 
   it('renders project cards on portfolio page', () => {
@@ -39,9 +41,13 @@ describe('HomePage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText(/Portfolio/i)).not.toBeNull();
     expect(
-      screen.getByText(/A collection of technical experiments/i),
+      screen.getByRole('heading', { name: /^portfolio\s*\.$/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Production-minded projects that turn ideas into usable products/i,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Edge Runtime Migration/i)).not.toBeNull();
   });
@@ -53,7 +59,9 @@ describe('HomePage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText(/Blog/i)).not.toBeNull();
+    expect(
+      screen.getByRole('heading', { name: /^blog\s*\.$/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Moving to the Edge/i)).not.toBeNull();
   });
 });

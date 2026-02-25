@@ -12,7 +12,7 @@ describe('PortfolioListPage', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /a collection of technical experiments and full-stack solutions/i,
+        /production-minded projects that turn ideas into usable products/i,
       ),
     ).toBeInTheDocument();
     expect(

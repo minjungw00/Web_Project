@@ -16,7 +16,9 @@ describe('MiniGamesPage', () => {
       screen.getByRole('heading', { name: /mini games\s*\./i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/A collection of technical experiments/i),
+      screen.getByText(
+        /Small interactive experiments for testing UI patterns/i,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText(/Components Lab/i)).toBeInTheDocument();
     expect(screen.getAllByRole('link')).toHaveLength(4);

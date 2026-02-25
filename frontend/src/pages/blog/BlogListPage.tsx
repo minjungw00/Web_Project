@@ -1,22 +1,28 @@
 import { useMemo, useState } from 'react';
 
+import { useTranslation } from 'react-i18next';
+
 import { filterBlogPosts, listBlogPosts } from '@/application/blog/usecases';
 import '@/pages/blog/blog.css';
 import { Article, SearchFilter } from '@/shared/ui';
 
 import type { CategoryItem } from '@/shared/ui/types';
 
-const BLOG_CATEGORIES: CategoryItem[] = [
-  { id: 'all', label: 'All' },
-  { id: 'frontend', label: 'Frontend' },
-  { id: 'engineering', label: 'Engineering' },
-  { id: 'ops', label: 'Ops' },
-];
-
 const BlogListPage = (): React.ReactElement => {
-  const posts = useMemo(() => listBlogPosts(), []);
+  const { i18n, t } = useTranslation();
+  const posts = useMemo(
+    () => listBlogPosts(i18n.resolvedLanguage),
+    [i18n.resolvedLanguage],
+  );
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
+
+  const categories: CategoryItem[] = [
+    { id: 'all', label: t('blog.categories.all') },
+    { id: 'frontend', label: t('blog.categories.frontend') },
+    { id: 'engineering', label: t('blog.categories.engineering') },
+    { id: 'ops', label: t('blog.categories.ops') },
+  ];
 
   const filteredPosts = useMemo(
     () => filterBlogPosts(posts, query, category),
@@ -27,21 +33,19 @@ const BlogListPage = (): React.ReactElement => {
     <div className="blog-page">
       <section className="blog-hero">
         <h1>
-          Blog
+          {t('blog.hero.title')}
           <span className="blog-hero-accent">.</span>
         </h1>
-        <p>
-          Documentation of my engineering journey, architectural deep-dives, and
-          insights into building performant web systems.
-        </p>
+        <p>{t('blog.hero.description')}</p>
       </section>
 
       <section aria-label="blog posts" className="blog-main">
         <SearchFilter
-          categories={BLOG_CATEGORIES}
+          categories={categories}
           mode="Desktop"
           onQueryChange={setQuery}
           onSelectCategory={setCategory}
+          placeholder={t('blog.searchPlaceholder')}
           query={query}
           selectedCategoryId={category}
         />

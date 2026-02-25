@@ -1,3 +1,7 @@
+import type { SupportedLanguage } from '@/shared/i18n/language';
+
+export type LocalizedText = Record<SupportedLanguage, string>;
+
 export interface MiniGame {
   id: string;
   to: string;
@@ -11,9 +15,9 @@ export interface MiniGame {
 export interface MiniGameDto {
   id: string;
   to: string;
-  title: string;
-  description: string;
+  title: LocalizedText;
+  description: LocalizedText;
   badges: string[];
   mediaSrc?: string;
-  mediaAlt?: string;
+  mediaAlt?: LocalizedText;
 }

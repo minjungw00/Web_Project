@@ -1,10 +1,16 @@
 import toBlogPost from '@/entities/blog/mapper';
 import getBlogPostDtos from '@/shared/api/blog';
+import { resolveSupportedLanguage } from '@/shared/i18n/language';
 
 import type { BlogPost } from '@/entities/blog/types';
+import type { SupportedLanguage } from '@/shared/i18n/language';
 
-export const listBlogPosts = (): BlogPost[] =>
-  getBlogPostDtos().map(toBlogPost);
+export const listBlogPosts = (language?: string): BlogPost[] => {
+  const supportedLanguage: SupportedLanguage =
+    resolveSupportedLanguage(language);
+
+  return getBlogPostDtos().map((dto) => toBlogPost(dto, supportedLanguage));
+};
 
 export const filterBlogPosts = (
   posts: BlogPost[],

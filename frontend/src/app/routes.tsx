@@ -30,7 +30,7 @@ const router = createBrowserRouter([
             path: 'mini-games/components',
             element: <ComponentsMiniGamePage />,
           },
-          { path: '*', element: <ErrorPage message="404 Not Found" /> },
+          { path: '*', element: <ErrorPage /> },
         ],
       },
     ],

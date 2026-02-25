@@ -4,6 +4,7 @@ import {
   RiBriefcase4Line,
   RiGamepadLine,
 } from '@remixicon/react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import listHomeSections from '@/application/home/usecases';
@@ -21,32 +22,32 @@ const HOME_ICONS: Record<HomeSection['iconName'], React.ReactNode> = {
   miniGames: <RiGamepadLine aria-hidden="true" className="home-card-icon" />,
 };
 
-const HomePage = (): React.ReactElement => (
-  <div className="home-page">
-    <section className="home-hero">
-      <h1>
-        Structured <br />
-        <span className="home-hero-accent">Intelligence.</span>
-      </h1>
-      <p>
-        Archiving the thought process, not just the code. A networked approach
-        to development. Archiving the thought process, not just the code. A
-        networked approach to development.
-      </p>
-    </section>
+const HomePage = (): React.ReactElement => {
+  const { t } = useTranslation();
 
-    <section aria-label="home sections" className="home-card-grid">
-      {sections.map((section) => (
-        <Link key={section.title} className="home-card-link" to={section.to}>
-          <Card
-            description={section.description}
-            icon={HOME_ICONS[section.iconName]}
-            title={section.title}
-          />
-        </Link>
-      ))}
-    </section>
-  </div>
-);
+  return (
+    <div className="home-page">
+      <section className="home-hero">
+        <h1>
+          {t('home.hero.title')} <br />
+          <span className="home-hero-accent">{t('home.hero.accent')}</span>
+        </h1>
+        <p>{t('home.hero.description')}</p>
+      </section>
+
+      <section aria-label="home sections" className="home-card-grid">
+        {sections.map((section) => (
+          <Link key={section.to} className="home-card-link" to={section.to}>
+            <Card
+              description={t(`home.cards.${section.iconName}.description`)}
+              icon={HOME_ICONS[section.iconName]}
+              title={t(`home.cards.${section.iconName}.title`)}
+            />
+          </Link>
+        ))}
+      </section>
+    </div>
+  );
+};
 
 export default HomePage;

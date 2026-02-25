@@ -9,6 +9,7 @@ export interface SearchFilterProps {
   categories: CategoryItem[];
   selectedCategoryId?: string;
   query: string;
+  placeholder?: string;
   onSelectCategory?: (id: string) => void;
   onQueryChange?: (query: string) => void;
   searchIcon?: React.ReactNode;
@@ -19,6 +20,7 @@ const SearchFilter = ({
   mode = 'Mobile',
   onQueryChange,
   onSelectCategory,
+  placeholder,
   query,
   searchIcon,
   selectedCategoryId,
@@ -49,6 +51,7 @@ const SearchFilter = ({
       <SearchBar
         icon={searchIcon}
         onChange={(event) => onQueryChange?.(event.target.value)}
+        placeholder={placeholder}
         value={query}
       />
     </section>
@@ -59,6 +62,7 @@ SearchFilter.defaultProps = {
   mode: 'Mobile',
   onQueryChange: undefined,
   onSelectCategory: undefined,
+  placeholder: undefined,
   searchIcon: undefined,
   selectedCategoryId: undefined,
 };

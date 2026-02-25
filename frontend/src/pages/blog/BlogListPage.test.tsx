@@ -11,7 +11,7 @@ describe('BlogListPage', () => {
       screen.getByRole('heading', { name: /^blog\s*\.$/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/documentation of my engineering journey/i),
+      screen.getByText(/notes from real development work/i),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', {
