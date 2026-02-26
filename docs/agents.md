@@ -2,10 +2,13 @@
 
 This document is a quick reference for agent rules. The authoritative rules are in:
 
-- `/AGENTS.md` (global)
-- `/frontend/AGENTS.md`
-- `/backend/AGENTS.md`
-- `/infra/AGENTS.md`
+- `AGENTS.md` (global)
+- `frontend/AGENTS.md`
+- `backend/AGENTS.md`
+- `infra/AGENTS.md`
+
+Use workspace-relative paths when referencing rule files.
+Avoid leading `/` paths (for example `/AGENTS.md`) because some agent runtimes can misinterpret them during context/variable parsing.
 
 If rules conflict, the nearest stack-level `AGENTS.md` takes precedence.
 

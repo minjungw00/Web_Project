@@ -188,6 +188,40 @@ jobs:
 
             sync_monitoring_htpasswd
 
+            STATE_FILE="$ROOTDIR/application/.blue-green-state"
+
+            read_target_color_from_state() {
+              local state_file="$1"
+              [ -f "$state_file" ] || return 1
+              local color
+              color=$(awk -F= '/^TARGET_COLOR=/{print $2}' "$state_file" | tail -n1 | tr -d '\r' || true)
+              case "$color" in
+                blue|green)
+                  printf '%s' "$color"
+                  return 0
+                  ;;
+              esac
+              return 1
+            }
+
+            read_backend_color_from_nginx_env() {
+              local env_file="$WORKDIR/nginx/.env.production"
+              [ -f "$env_file" ] || return 1
+              local host
+              host=$(awk -F= '/^NGINX_BACKEND_HOST=/{print $2}' "$env_file" | tail -n1 | tr -d '\r' || true)
+              case "$host" in
+                backend-blue*)
+                  printf '%s' "blue"
+                  return 0
+                  ;;
+                backend-green*)
+                  printf '%s' "green"
+                  return 0
+                  ;;
+              esac
+              return 1
+            }
+
             detect_active_backend() {
               for candidate in green blue; do
                 local cid status
@@ -224,9 +258,25 @@ jobs:
               echo "[deploy-gateway] NGINX_BACKEND_HOST updated to backend-${color}"
             }
 
-            ACTIVE_BACKEND_COLOR=$(detect_active_backend || true)
+            ACTIVE_BACKEND_COLOR=""
+
+            ACTIVE_BACKEND_COLOR=$(read_target_color_from_state "$STATE_FILE" || true)
+            if [ -n "$ACTIVE_BACKEND_COLOR" ]; then
+              echo "[deploy-gateway] target color loaded from state file: $ACTIVE_BACKEND_COLOR"
+            else
+              ACTIVE_BACKEND_COLOR=$(read_backend_color_from_nginx_env || true)
+              if [ -n "$ACTIVE_BACKEND_COLOR" ]; then
+                echo "[deploy-gateway] target color loaded from nginx env: $ACTIVE_BACKEND_COLOR"
+              else
+                ACTIVE_BACKEND_COLOR=$(detect_active_backend || true)
+                if [ -n "$ACTIVE_BACKEND_COLOR" ]; then
+                  echo "[deploy-gateway] target color detected from running backend: $ACTIVE_BACKEND_COLOR"
+                fi
+              fi
+            fi
+
             if [ -z "$ACTIVE_BACKEND_COLOR" ]; then
-              echo "[deploy-gateway] warning: active backend color could not be determined; keeping existing NGINX_BACKEND_HOST" >&2
+              echo "[deploy-gateway] warning: target backend color could not be determined; keeping existing NGINX_BACKEND_HOST" >&2
             fi
             update_nginx_backend_host "$ACTIVE_BACKEND_COLOR"
 

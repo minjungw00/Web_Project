@@ -16,6 +16,11 @@ Before editing any file, use the nearest `AGENTS.md` in this order:
 1. Check the file's directory.
 2. Walk up parent directories until the repository root.
 
+Path reference rule:
+
+- When referring to rule files in prompts/agent context, use workspace-relative paths (e.g. `AGENTS.md`, `frontend/AGENTS.md`).
+- Avoid leading `/` paths (e.g. `/AGENTS.md`) because some agent runtimes may treat them as special/typed references and fail to resolve context.
+
 Precedence:
 
 - Nearest file wins.
