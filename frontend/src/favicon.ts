@@ -28,8 +28,22 @@ const MANAGED_ATTR = 'data-managed';
 const LINK_SCOPE = 'app-favicon';
 const META_SCOPE = 'app-favicon-meta';
 
-const manifestUrl = new URL('./assets/favicon/manifest.json', import.meta.url)
-  .href;
+const toAbsoluteUrl = (path: string) =>
+  new URL(path, window.location.origin).href;
+
+const manifestUrl = `data:application/manifest+json,${encodeURIComponent(
+  JSON.stringify({
+    name: 'App',
+    icons: [
+      { src: toAbsoluteUrl(android36), sizes: '36x36', type: 'image/png' },
+      { src: toAbsoluteUrl(android48), sizes: '48x48', type: 'image/png' },
+      { src: toAbsoluteUrl(android72), sizes: '72x72', type: 'image/png' },
+      { src: toAbsoluteUrl(android96), sizes: '96x96', type: 'image/png' },
+      { src: toAbsoluteUrl(android144), sizes: '144x144', type: 'image/png' },
+      { src: toAbsoluteUrl(android192), sizes: '192x192', type: 'image/png' },
+    ],
+  }),
+)}`;
 const browserconfigUrl = new URL(
   './assets/favicon/browserconfig.xml',
   import.meta.url,
