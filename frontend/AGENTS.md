@@ -28,6 +28,11 @@ From repo root, equivalents exist (for example `pnpm --filter ./frontend build` 
 - Keep changes localized and avoid introducing new frameworks or toolchain replacements.
 - Do not weaken ESLint/TypeScript rules to make checks pass.
 - Keep refactors and behavior changes separated when practical.
+- After any code edit in `/frontend/**`, always run both:
+  - `pnpm lint`
+  - `pnpm test:file -- <changed-test-file-or-glob>` (or nearest related test)
+- Do not conclude work before lint/test execution unless the user explicitly asks to skip verification.
+- If VS Code `runTests` cannot start due runner/environment detection, use package scripts above as the required fallback path.
 
 ## Current Structure Conventions
 

@@ -29,7 +29,7 @@
     "format:frontend": "pnpm --filter ./frontend format",
     "typecheck:frontend": "pnpm --filter ./frontend typecheck",
     "test:frontend": "pnpm --filter ./frontend test:ci",
-    "test:frontend:file": "pnpm --filter ./frontend test:file",
+    "test:frontend:file": "node ./scripts/run-frontend-vitest-file.mjs",
     "prepare": "lefthook install",
     "dev:backend": "cd backend && ./gradlew bootRun",
     "build:backend": "cd backend && ./gradlew build",

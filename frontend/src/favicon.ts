@@ -28,10 +28,12 @@ const MANAGED_ATTR = 'data-managed';
 const LINK_SCOPE = 'app-favicon';
 const META_SCOPE = 'app-favicon-meta';
 
-const resolveAssetUrl = (path: string) => new URL(path, import.meta.url).href;
-
-const manifestUrl = resolveAssetUrl('./assets/favicon/manifest.json');
-const browserconfigUrl = resolveAssetUrl('./assets/favicon/browserconfig.xml');
+const manifestUrl = new URL('./assets/favicon/manifest.json', import.meta.url)
+  .href;
+const browserconfigUrl = new URL(
+  './assets/favicon/browserconfig.xml',
+  import.meta.url,
+).href;
 
 const removeManagedElements = () => {
   const managedSelectors = [

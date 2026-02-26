@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
@@ -21,7 +21,9 @@ describe('ErrorPage i18n', () => {
       screen.getByRole('link', { name: 'Back to Home' }),
     ).toBeInTheDocument();
 
-    await i18n.changeLanguage('ko');
+    await act(async () => {
+      await i18n.changeLanguage('ko');
+    });
 
     await waitFor(() => {
       expect(

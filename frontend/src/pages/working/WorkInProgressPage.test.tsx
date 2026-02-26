@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import WorkInProgressPage from '@/pages/working/WorkInProgressPage';
@@ -20,7 +20,9 @@ describe('WorkInProgressPage i18n', () => {
     ).toBeInTheDocument();
     expect(screen.getByAltText('Work in progress image')).toBeInTheDocument();
 
-    await i18n.changeLanguage('ko');
+    await act(async () => {
+      await i18n.changeLanguage('ko');
+    });
 
     await waitFor(() => {
       expect(

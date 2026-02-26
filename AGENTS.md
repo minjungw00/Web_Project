@@ -42,6 +42,12 @@ Precedence:
 ## Verification
 
 - Validate behavior changes with existing project tooling (tests/build/lint/typecheck) at the smallest useful scope first.
+- For any code modification, verification is mandatory before handoff.
+- For frontend code changes (`/frontend/**`), always run both lint and tests after edits:
+  - Lint: `pnpm run lint:frontend`
+  - Targeted tests first: `pnpm run test:frontend:file -- <test-file-or-glob>`
+  - Broader frontend test run only if needed: `pnpm run test:frontend`
+- Do not finish a task with unrun verification unless explicitly requested by the user.
 
 ## Test Scope Policy (Agents)
 
@@ -49,7 +55,8 @@ Precedence:
 - Use broad test runs only when targeted runs pass and broader confidence is required.
 - In VS Code agent runs, prefer targeted execution by specific test name first (more stable than broad run in this workspace).
 - If `Cannot find run action!` or file-filter resolution errors occur, do not jump to full-suite; retry with a narrower named test and stack-specific command below.
-- When using `runTests(files=...)`, use workspace-relative paths (e.g. `frontend/src/App.test.tsx`, `backend/src/test/...`) instead of absolute paths.
+- `runTests(files=...)` expects absolute file paths.
+- In this monorepo, frontend Vitest discovery via `runTests` may fail due environment detection limits for nested workspace runners. If frontend `runTests` does not start, use the stack command fallback below instead of retrying `runTests` repeatedly.
 - Preferred commands:
   - Frontend single/related test files: `pnpm run test:frontend:file -- <test-file-or-glob>`
   - Backend single test class/method: `pnpm run test:backend:class -- <ClassName or ClassName.methodName>`
